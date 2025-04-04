@@ -1,5 +1,5 @@
 import express from 'express';
-import { UserLoginCredentials } from '../models/LoginModels';
+import { UserLoginCredentials } from '../models/LoginModels.js';
 
 const router = express.Router();
 
@@ -18,7 +18,8 @@ router.post('/api/userRegister', async (req, res) => {
                     password: password
                 })
                 userStructure.save();
-            }
+            } 
+            return res.status(404).json({ success: false, error: "Enter the correct passowrd..!!" });
         }
     } catch (error) {
         return res.status(500).json({ success: false, error: error.message });
@@ -32,7 +33,11 @@ router.post('/api/userLogin', async (req, res) => {
         if (!isUser) {
             return res.status(404).json({ success: false, error: "Couldn't find any user using this email. Enter a valid mail." });
         }
-        return res.status(200).json({ success: true, message: "User loggedin successfully.." });
+        if (isUser.password === password) {
+            return res.status(200).json({ success: true, message: "User loggedin successfully.." });
+        } 
+        return res.status(404).json({ success: false, error: "Please enter the correct details." });
+        
     } catch (error) {
         return res.status(500).json({ success: false, error: error.message });
     }

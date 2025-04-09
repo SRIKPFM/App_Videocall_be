@@ -40,10 +40,21 @@ router.post('/api/userLogin', async (req, res) => {
             return res.status(404).json({ success: false, error: "Couldn't find any user using this email. Enter a valid mail." });
         }
         if (isUser.password === password) {
-            return res.status(200).json({ success: true, message: "User loggedin successfully.." });
+            return res.status(200).json({ success: true, message: "User loggedin successfully..", userId: isUser.userId });
         } 
         return res.status(404).json({ success: false, error: "Please enter the correct details." });
         
+    } catch (error) {
+        return res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+router.post('/api/getUser', async (req, res) => {
+    try {
+        const { userId } = req.body;
+        const findUser = await UserLoginCredentials.findOne({ userId: userId },{createdAt:0, updatedAt:0, __v:0})
+        .then((userDetails) => { return res.status(200).json({ success: true, data: userDetails })})
+        .catch((error) => { return res.status(404).json({ success: false, error: "Can't find user details." })});
     } catch (error) {
         return res.status(500).json({ success: false, error: error.message });
     }

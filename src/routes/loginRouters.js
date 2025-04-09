@@ -3,6 +3,10 @@ import { UserLoginCredentials } from '../models/LoginModels.js';
 
 const router = express.Router();
 
+router.get('/api/checkServer', async (req, res) => {
+    console.log("Server is running...");
+});
+
 router.post('/api/userRegister', async (req, res) => {
     try {
         const { userId, userName, email, password, confirmPassword } = req.body;
@@ -17,9 +21,11 @@ router.post('/api/userRegister', async (req, res) => {
                     email: email,
                     password: password
                 })
-                userStructure.save();
-            } 
-            return res.status(404).json({ success: false, error: "Enter the correct passowrd..!!" });
+                userStructure.save()
+                .then(() => { return res.status(200).json({ success: true, message: "User registered successfully..!!" })});
+            } else {
+                return res.status(404).json({ success: false, error: "Enter the correct passowrd..!!" });
+            }
         }
     } catch (error) {
         return res.status(500).json({ success: false, error: error.message });

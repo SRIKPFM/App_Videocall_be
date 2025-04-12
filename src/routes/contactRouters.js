@@ -26,24 +26,20 @@ router.post('/api/createNewContact', async (req, res) => {
             .catch((error) => { return res.status(400).json({ success: false, error: "Faild to create contact this time. Please try again..!!" })});
         } else {
             const findUserNameExcist = isUserExcist.userContactDetails.find((data) => data.firstName === fName && data.lastName === lName );
-            if (!findUserNameExcist) {
-                const userContactDetails = {
-                    firstName: fName,
-                    lastName: lName,
-                    idNumber: idNum,
-                    birthday: birthday,
-                    mobNum: mobNum,
-                    saveTo: saveTo
-                };
-                const addUserContact = isUserExcist.userContactDetails.push(userContactDetails);
-                if (addUserContact) {
-                    return res.status(200).json({ success: true, message: "Contact added successfully.." });
-                } else {
-                    return res.status(400).json({ success: false, error: "Failed to add contact.." });
-                }
-            }
+            if (findUserNameExcist) {return res.status(400).json({ success: false, error: "Name already excist."})}
+            const userContactDetails = {
+                firstName: fName,
+                lastName: lName,
+                idNumber: idNum,
+                birthday: birthday,
+                mobNum: mobNum,
+                saveTo: saveTo
+            };
+            const addUserContact = isUserExcist.userContactDetails.push(userContactDetails);
+            await isUserExcist.save()
+            .then(() => { return res.status(200).json({ success: true, message: "Contact added successfully.." })})
+            .catch((error) => { return res.status(400).json({ success: false, error: error.message })});
         }
-        return res.status(400).json({ success: false, error: "Name already excist."})
     } catch (error) {
         return res.status(500).json({ success: false, error: error.message });
     }
@@ -54,7 +50,7 @@ router.post('/api/getUserContacts', async ( req, res ) => {
         const { userId } = req.body;
         const getAllContacts = await ContactDetails.findOne({ userId: userId });
         if (getAllContacts) {
-            return res.status(200).json({ success: true, data: getAllContacts });
+            return res.status(200).json({ success: true, data: getAllContacts.userContactDetails });
         } 
         return res.status(404).json({ success: false, error: "Can't find any contact details." });
     } catch (error) {

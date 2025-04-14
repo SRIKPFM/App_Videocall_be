@@ -1,7 +1,7 @@
 import express from 'express';
 import { v4 as uuidv4 } from 'uuid';
 import { CallLogDetails } from '../models/callLogModels.js';
-import { UserLoginCredentials } from '../models/LoginModels.js';
+import { UserLoginCredentials } from '../models/loginModels.js';
 
 const router = express.Router();
 

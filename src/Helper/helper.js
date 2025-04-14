@@ -1,7 +1,8 @@
 import callLogRoutes from '../routes/callLogRouters.js';
 import loginRoutes from '../routes/loginRouters.js';
 import contactRoutes from '../routes/contactRouters.js';
-import agoraRoutes from '../routes/agoraRouters.js'
+import agoraRoutes from '../routes/agoraRouters.js';
+import fcmRoutes from '../routes/fcmRouters.js';
 
 export const initiateApp = (expressApp) => {
 
@@ -12,4 +13,6 @@ export const initiateApp = (expressApp) => {
     expressApp.use(contactRoutes);
 
     expressApp.use(agoraRoutes);
+
+    expressApp.use(fcmRoutes);
 };

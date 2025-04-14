@@ -1,5 +1,5 @@
 import express from 'express';
-import { UserLoginCredentials } from '../models/LoginModels.js';
+import { UserLoginCredentials } from '../models/loginModels.js';
 
 const router = express.Router();
 
@@ -19,10 +19,11 @@ router.post('/api/userRegister', async (req, res) => {
                     userId: userId,
                     userName: userName,
                     email: email,
-                    password: password
+                    password: password,
+                    fcmToken: null
                 })
                 userStructure.save()
-                .then(() => { return res.status(200).json({ success: true, message: "User registered successfully..!!" })});
+                    .then(() => { return res.status(200).json({ success: true, message: "User registered successfully..!!" })});
             } else {
                 return res.status(404).json({ success: false, error: "Enter the correct passowrd..!!" });
             }
@@ -41,9 +42,9 @@ router.post('/api/userLogin', async (req, res) => {
         }
         if (isUser.password === password) {
             return res.status(200).json({ success: true, message: "User loggedin successfully..", userId: isUser.userId });
-        } 
+        }
         return res.status(404).json({ success: false, error: "Please enter the correct details." });
-        
+
     } catch (error) {
         return res.status(500).json({ success: false, error: error.message });
     }
@@ -52,9 +53,23 @@ router.post('/api/userLogin', async (req, res) => {
 router.post('/api/getUser', async (req, res) => {
     try {
         const { userId } = req.body;
-        const findUser = await UserLoginCredentials.findOne({ userId: userId },{createdAt:0, updatedAt:0, __v:0})
-        .then((userDetails) => { return res.status(200).json({ success: true, data: userDetails })})
-        .catch((error) => { return res.status(404).json({ success: false, error: "Can't find user details." })});
+        const findUser = await UserLoginCredentials.findOne({ userId: userId }, { createdAt: 0, updatedAt: 0, __v: 0 })
+            .then((userDetails) => { return res.status(200).json({ success: true, data: userDetails }) })
+            .catch((error) => { return res.status(404).json({ success: false, error: "Can't find user details." }) });
+    } catch (error) {
+        return res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+router.post('/api/sendFcmTokenToBackend', async (req, res) => {
+    try {
+        const { userId, token } = req.body;
+        if (!token) { return res.status(404).json({ success: false, error: "Token is missing..!!" }) };
+        const isUserExcist = await UserLoginCredentials.findOne({ userId: userId });
+        if (!isUserExcist) { return res.status(400).json({ success: false, error: "User not found..!!" }) };
+        const updateToken = await UserLoginCredentials.findOneAndUpdate({ userId: userId }, { $set: { fcmToken: token }});
+        if (updateToken) { return res.status(200).json({ success: true, message: "Token stored successfully.." })};
+        return res.status(400).json({ success: false, error: "Error occured while storing token.." });
     } catch (error) {
         return res.status(500).json({ success: false, error: error.message });
     }

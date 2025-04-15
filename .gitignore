@@ -1,3 +1,4 @@
 /node_modules
 /package-lock.json
 src/Helper/firebase-adminsdk.json
+src/Helper/firebase-adminsdk-1.json

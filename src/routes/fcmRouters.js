@@ -23,4 +23,36 @@ router.post('/api/sentNotification', async (req, res) => {
     }
 });
 
+router.post('/api/sentCallNotification', async (req, res) => {
+    try {
+        const { channelName, userId, recevierUserId } = req.body;
+        const isUserExcist = await UserLoginCredentials.findOne({ userId: userId });
+        const isRecevierExcist = await UserLoginCredentials.findOne({ userId: recevierUserId });
+        if (!isUserExcist || !isRecevierExcist) {
+            return !isUserExcist ? "User not found..!!" : "Recevier not found..!!";
+        }
+
+        const payload = {
+            token: isRecevierExcist.fcmToken,
+            notification: {
+                title: 'Incoming call',
+                body: `You have a call from ${isUserExcist.userName}`
+            },
+            data: {
+                type: 'Incoming call',
+                channelName: channelName,
+                userId: userId,
+                recevierUserId: recevierUserId,
+                isCallee: 'true'
+            }
+        };
+
+        await admin.messaging().send(payload)
+        .then((message) => { return res.status(200).json({ success: true, message: "Notification send successfully..!!", data: message })})
+        .catch((error) => { return res.status(400).json({ success: false, error: error.message })});
+    } catch (error) {
+        return res.status(500).json({ success: false, error: error });
+    }
+});
+
 export default router;

@@ -37,6 +37,6 @@ const generateAccessToken = (req, res) => {
     return res.status(200).json({ success: true, token: token })
 };
 
-router.get('/api/getRtcAccessToken', noCache, generateAccessToken);
+router.post('/api/getRtcAccessToken', noCache, generateAccessToken);
 
 export default router;

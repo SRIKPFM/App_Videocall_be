@@ -8,8 +8,9 @@ const router = express.Router();
 router.post('/api/saveCallLogs', async (req, res) => {
     try {
         const { callerId, recevierId, callType, status, isCalling } = req.body;
-        const isCallerOrRecevierIdExcist = await UserLoginCredentials.find({ callerId: callerId,recevierId });
-        if (!isCallerOrRecevierIdExcist) {
+        const isCallerExcist = await UserLoginCredentials.findOne({ userId: callerId });
+        const isReceiverExcist = await UserLoginCredentials.findOne({ userId: recevierId });
+        if (!isCallerExcist || !isReceiverExcist) {
             return res.status(404).json({ success: false, error: "Can't find caller or recevier data." });
         }
         const callStructure = {
@@ -23,11 +24,9 @@ router.post('/api/saveCallLogs', async (req, res) => {
             endTime: "",
             duration: 0
         };
-        const createCallLog = await CallLogDetails.create(callStructure);
-        if (!createCallLog) {
-            return res.status(404).json({ success: false, message: "Can't create call log." });
-        }
-        return res.status(200).json({ success: true, message: "Call log created successfully.." });
+        const createCallLog = await CallLogDetails.create(callStructure)
+        .then((data) => { return res.status(200).json({ success: true, message: "Call log created successfully..", data: data })})
+        .catch((error) => { return res.status(404).json({ success: false, message: "Can't create call log.", error: error })});
     } catch (error) {
         res.status(500).json({ success: false, error: error.message });
     }
@@ -50,7 +49,7 @@ router.post('/api/updateCallLogs', async (req, res) => {
         }
 
         await findCallLog.save();
-        res.status(200).json({ success: true, message: findCallLog})
+        res.status(200).json({ success: true, message: findCallLog })
         const callExcist = await CallLogDetails.findOne({ })
     } catch (error) {
         return res.status(500).json({ success: false, error: error.message });

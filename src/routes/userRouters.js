@@ -20,7 +20,8 @@ router.post('/api/userRegister', async (req, res) => {
                     userName: userName,
                     email: email,
                     password: password,
-                    fcmToken: null
+                    fcmToken: null,
+                    isLoggedin: false
                 })
                 userStructure.save()
                     .then(() => { return res.status(200).json({ success: true, message: "User registered successfully..!!" })});
@@ -33,18 +34,26 @@ router.post('/api/userRegister', async (req, res) => {
     }
 });
 
-router.post('/api/userLogin', async (req, res) => {
+router.post('/api/userLoginOrLogout', async (req, res) => {
     try {
-        const { email, password } = req.body;
+        const { type, email, password } = req.body;
         const isUser = await UserLoginCredentials.findOne({ email: email });
         if (!isUser) {
             return res.status(404).json({ success: false, error: "Couldn't find any user using this email. Enter a valid mail." });
+        } else if ( type === 'login' ) {
+            if (isUser.password === password) {
+                isUser.isLoggedin = true;
+                await isUser.save();
+                return res.status(200).json({ success: true, message: "User loggedin successfully..", userId: isUser.userId });
+            }
+            return res.status(404).json({ success: false, error: "Please enter the correct details." });    
+        } else if ( type === "logout" ){
+            isUser.isLoggedin = false;
+            await isUser.save();
+            return res.status(200).json({ success: true, message: "User loggedout successfully..", userId: isUser.userId });
+        } else {
+            return res.status(400).json({ success: false, message: "Please enter the valid type value.." });
         }
-        if (isUser.password === password) {
-            return res.status(200).json({ success: true, message: "User loggedin successfully..", userId: isUser.userId });
-        }
-        return res.status(404).json({ success: false, error: "Please enter the correct details." });
-
     } catch (error) {
         return res.status(500).json({ success: false, error: error.message });
     }

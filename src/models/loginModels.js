@@ -10,7 +10,8 @@ export const UserLoginCredentials = mongoose.model(
             userName: String,
             email: String,
             password: String,
-            fcmToken: String
+            fcmToken: String,
+            isLoggedin: Boolean
         },
         {
             timestamps: true

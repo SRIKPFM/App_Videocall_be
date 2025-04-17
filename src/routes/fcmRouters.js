@@ -40,7 +40,8 @@ router.post('/api/sentCallNotification', async (req, res) => {
                 token: isRecevierExcist.fcmToken,
                 notification: {
                     title: type,
-                    body: type === "Incoming call" ? `You have a call from ${isUserExcist.userName}` : `You have a missed call from ${isUserExcist.userName}`
+                    body: type === "Incoming call" ? `You have a call from ${isUserExcist.userName}` : `You have a missed call from ${isUserExcist.userName}`,
+                    sound: "default"
                 },
                 data: {
                     type: type,

@@ -11,6 +11,7 @@ export const CallLogDetails = mongoose.model(
             recevierId: String,
             callType: String,
             status: String,
+            callInitiatedTime: Date,
             startTime: Date,
             endTime: Date,
             duration: Number,

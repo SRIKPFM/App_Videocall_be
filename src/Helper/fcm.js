@@ -1,5 +1,13 @@
 import admin from 'firebase-admin';
-import serviceAccount from './firebase-adminsdk.json' assert { type: 'json' };
+import { fileURLToPath } from 'url';
+import { dirname } from 'path';
+import { promises as fs } from 'fs';
+// import serviceAccount from './firebase-adminsdk.json' assert { type: 'json' };
+
+const _filename = fileURLToPath(import.meta.url);
+const _dirname = dirname(_filename);
+
+const serviceAccount = JSON.parse(await fs.readFile(new URL('./firebase-adminsdk.json', import.meta.url)));
 
 admin.initializeApp({
     credential: admin.credential.cert(serviceAccount)

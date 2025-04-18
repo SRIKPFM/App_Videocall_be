@@ -26,7 +26,7 @@ router.post('/api/sentNotification', async (req, res) => {
 
 router.post('/api/sentCallNotification', async (req, res) => {
     try {
-        const { callId, type, channelName, userId, recevierUserId } = req.body;
+        const { callType, callId, type, channelName, userId, recevierUserId } = req.body;
         const isUserExcist = await UserLoginCredentials.findOne({ userId: userId });
         const isRecevierExcist = await UserLoginCredentials.findOne({ userId: recevierUserId });
         const isCallExcist = await CallLogDetails.findOne({ callId: callId });
@@ -38,17 +38,16 @@ router.post('/api/sentCallNotification', async (req, res) => {
         } else {
             const payload = {
                 token: isRecevierExcist.fcmToken,
-                notification: {
+                data: {
                     title: type,
                     body: type === "Incoming call" ? `You have a call from ${isUserExcist.userName}` : `You have a missed call from ${isUserExcist.userName}`,
-                    sound: "default"
-                },
-                data: {
+                    sound: "default",
                     type: type,
                     channelName: channelName,
                     userId: userId,
                     recevierUserId: recevierUserId,
-                    isCallee: 'true'
+                    isCallee: 'true',
+                    callType: callType
                 },
                 android: {
                     priority: 'high'

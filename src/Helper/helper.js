@@ -3,6 +3,7 @@ import userRoutes from '../routes/userRouters.js';
 import contactRoutes from '../routes/contactRouters.js';
 import agoraRoutes from '../routes/agoraRouters.js';
 import fcmRoutes from '../routes/fcmRouters.js';
+import messageRoutes from '../routes/MessageRouters.js';
 
 export const initiateApp = (expressApp) => {
 
@@ -15,4 +16,6 @@ export const initiateApp = (expressApp) => {
     expressApp.use(agoraRoutes);
 
     expressApp.use(fcmRoutes);
+
+    expressApp.use(messageRoutes);
 };

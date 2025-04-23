@@ -1,8 +1,13 @@
 import express from 'express';
 import { Server } from 'socket.io';
+import multer from 'multer';
+import { bucket } from '../Helper/fcm.js';
 import { MessageSchema } from '../models/MessageModels.js';
 
 const router = express.Router();
+
+const storage = multer.memoryStorage();
+const upload = multer({storage: storage});
 
 const io = new Server({
     cors: {
@@ -77,6 +82,36 @@ router.post('/api/getMessages', async (req, res) => {
         }).sort("timeStamp")
         .then((messages) => { return res.status(200).json({ success: true, data: messages })})
         .catch((error) => { return res.status(404).json({ success: false, error: "Can't find any messages." })});
+    } catch (error) {
+        return res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+router.post('/api/uploadFiles', upload('file'), async (req, res) => {
+    try {
+        if (!req.file) { return res.status(400).json({ success: false, error: "File not uploaded." })}
+        const file = req.file;
+        const blob = bucket.file(Date.now() + '_' + file.originalname);
+
+        const blobStream = blob.createWriteStream({
+            metadata: {
+                contentType: file.mimetype
+            }
+        });
+
+        blobStream.on("error", (error) => {
+            console.error(error);
+            return res.status(500).json({ success: false, error: error , message: "Upload error" });
+        });
+
+        blobStream.on("finish", async () => {
+            await blob.makePublic();
+
+            const publicURL = `https://storage.googleapis.com/${bucket.name}/${blob.name}`;
+            return res.status(200).json({ success: true, Url: publicURL });
+        });
+        
+        blobStream.end(file.buffer);
     } catch (error) {
         return res.status(500).json({ success: false, error: error.message });
     }

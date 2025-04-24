@@ -3,7 +3,7 @@ import mongoose from 'mongoose';
 import dotenv from 'dotenv';
 import cors from 'cors';
 import bodyParser from 'body-parser';
-import { initiateApp } from './src/Helper/helper.js';
+import { initiateApp } from './src/Helper/apiHelper.js';
 dotenv.config();
 
 const app = express();

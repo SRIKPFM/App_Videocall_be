@@ -7,7 +7,7 @@ import { MessageSchema } from '../models/MessageModels.js';
 const router = express.Router();
 
 const storage = multer.memoryStorage();
-const upload = multer({storage: storage});
+const upload = multer({storage});
 
 const io = new Server({
     cors: {
@@ -45,7 +45,7 @@ io.on('connection', (socket) => {
 
 router.post('/api/storeMessages', async (req, res) => {
     try {
-        const { senderId, receiverId, text, imageUrl, videoUrl, documentUrl } = req.body;
+        const { type, senderId, receiverId, text, imageUrl, videoUrl, documentUrl } = req.body;
         if (!senderId || !receiverId) { return res.status(400).json({ success: false, error: "senderId or receiverId is required..!!" })};
         const createMessage = {
             senderId: senderId,
@@ -87,7 +87,7 @@ router.post('/api/getMessages', async (req, res) => {
     }
 });
 
-router.post('/api/uploadFiles', upload('file'), async (req, res) => {
+router.post('/api/uploadFiles', upload.single('file'), async (req, res) => {
     try {
         if (!req.file) { return res.status(400).json({ success: false, error: "File not uploaded." })}
         const file = req.file;

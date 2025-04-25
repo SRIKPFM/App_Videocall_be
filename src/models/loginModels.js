@@ -11,7 +11,16 @@ export const UserLoginCredentials = mongoose.model(
             email: String,
             password: String,
             fcmToken: String,
-            isLoggedin: Boolean
+            isLoggedin: Boolean,
+            pinedUsers: [{
+                userName: String,
+                userId: String
+            }],
+            lockedUserChat: [{
+                userName: String,
+                userId: String,
+                password: String
+            }]
         },
         {
             timestamps: true

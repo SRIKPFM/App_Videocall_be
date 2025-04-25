@@ -11,6 +11,7 @@ export const ContactDetails = mongoose.model(
                 {
                     firstName: String,
                     lastName: String,
+                    fullName: String,
                     idNumber: String,
                     birthday: Date,
                     mobNum: String,

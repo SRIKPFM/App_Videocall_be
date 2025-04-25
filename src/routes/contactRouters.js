@@ -14,6 +14,7 @@ router.post('/api/createNewContact', async (req, res) => {
                     {
                         firstName: fName,
                         lastName: lName,
+                        fullName: fName + (lName !== '' ? " " + lName : lName),
                         idNumber: idNum,
                         birthday: birthday,
                         mobNum: mobNum,
@@ -30,6 +31,7 @@ router.post('/api/createNewContact', async (req, res) => {
             const userContactDetails = {
                 firstName: fName,
                 lastName: lName,
+                fullName: fName + (lName !== '' ? " " + lName : lName),
                 idNumber: idNum,
                 birthday: birthday,
                 mobNum: mobNum,
@@ -70,6 +72,21 @@ router.post('/api/getUserUniqueContact', async (req, res) => {
             return res.status(404).json({ success: false, error: "Can't find that unique contact.." });
         }
         return res.status(200).json({ success: true, data: getUserUniqueContact });
+    } catch (error) {
+        return res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+router.post('/api/removeContact', async (req, res) => {
+    try {
+        const { userId, idNum, userName } =  req.body;
+        const getUserContact = await ContactDetails.findOne({ userId: userId });
+        if (!getUserContact) { return res.status(404).json({ success: false, error: "This user don't have a contact..!!" })};
+        const filterContact = getUserContact.userContactDetails.filter((data) => data.fullName !== userName || data.idNumber !== idNum );
+        getUserContact.userContactDetails = filterContact;
+        getUserContact.save()
+        .then(() => { return res.status(200).json({ success: true, message: "Contact removed successfully.." })})
+        .catch((error) => { return res.status(400).json({ success: false, error: error.message })});
     } catch (error) {
         return res.status(500).json({ success: false, error: error.message });
     }

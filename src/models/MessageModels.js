@@ -6,6 +6,7 @@ export const MessageSchema = mongoose.model(
     "MessageSchema",
     new Schema(
         {
+            messageId: String,
             senderId: String,
             receiverId: String,
             content: {
@@ -14,7 +15,8 @@ export const MessageSchema = mongoose.model(
                 videoUrl: String,
                 documentUrl: String,
                 timeStamp: { type: Date, default: Date.now }
-            }
+            },
+            isPined: Boolean
         }
     ),
     "MessageSchema"

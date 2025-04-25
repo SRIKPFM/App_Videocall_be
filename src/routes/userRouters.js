@@ -1,5 +1,6 @@
 import express from 'express';
 import { UserLoginCredentials } from '../models/loginModels.js';
+import { ContactDetails } from '../models/contactsModels.js';
 
 const router = express.Router();
 
@@ -79,6 +80,48 @@ router.post('/api/sendFcmTokenToBackend', async (req, res) => {
         const updateToken = await UserLoginCredentials.findOneAndUpdate({ userId: userId }, { $set: { fcmToken: token }});
         if (updateToken) { return res.status(200).json({ success: true, message: "Token stored successfully.." })};
         return res.status(400).json({ success: false, error: "Error occured while storing token.." });
+    } catch (error) {
+        return res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+router.post('/api/pinUser', async (req, res) => {
+    try {
+        const { userId, userName } = req.body;
+        const isUserExcist = await UserLoginCredentials.findOne({ userId: userId });
+        if (!isUserExcist) {
+            return res.status(404).json({ success: false, error: "User not found..!!" });
+        } else {
+            const findUserContact = await ContactDetails.findOne({ userId: userId });
+            if (!findUserContact) { return res.status(404).json({ success: false, error: "There is no contacts for this user..!!" })}
+            const getSpecificUser = findUserContact.userContactDetails.find((data) => data.fullName === userName)
+            console.log(findUserContact);
+            if (!getSpecificUser) { return res.status(404).json({ success: false, error: "There is no User in your contact..!!" })}
+            const pinUser = {
+                userName: getSpecificUser.fullName,
+                userId: getSpecificUser.idNumber
+            }
+            isUserExcist.pinedUsers.push(pinUser);
+            isUserExcist.save()
+            .then(() => { return res.status(200).json({ success: true, message: "User pined successfully..!!" })})
+            .catch((error) => { return res.status(400).json({ success: false, error: error.message })});
+        }
+    } catch(error) {
+        return res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+router.post('/api/unPinUser', async (req, res) => {
+    try {
+        const { userId, userName, idNumber } = req.body;
+        const isUserExcist = await UserLoginCredentials.findOne({ userId: userId });
+        if (!isUserExcist) { return res.status(404).json({ success: false, error: "User not found..!!" })}
+        const isUserPined = isUserExcist.pinedUsers.filter((data) => data.userName !== userName && data.userId !== idNumber );
+        if (!isUserPined) { return res.status(404).json({ success: false, error: "User not pined.." })}
+        // const unPinUser = await UserLoginCredentials.findOneAndUpdate({ userId: userId},{ $pull: {'pinedUsers.userName' : userName }})
+        isUserExcist.pinedUsers = isUserPined;
+        isUserExcist.save();
+        return res.status(200).json({ success: true, message: "User unpined successfully.." });
     } catch (error) {
         return res.status(500).json({ success: false, error: error.message });
     }

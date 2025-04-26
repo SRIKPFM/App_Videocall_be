@@ -1,5 +1,4 @@
 import express from 'express';
-import { Server } from 'socket.io';
 import multer from 'multer';
 import { v4 as uuidv4 } from 'uuid';
 import { bucket } from '../Helper/fcm.js';
@@ -10,39 +9,37 @@ const router = express.Router();
 const storage = multer.memoryStorage();
 const upload = multer({storage});
 
-const io = new Server({
-    cors: {
-        origin: "*"
-    }
-});
-
 let onlineUsers = {};
 
-io.on('connection', (socket) => {
-    console.log("User connected => " + socket.id);
-
-    socket.on("add_user", (userId) => {
-        onlineUsers[userId] = socket.id
-    });
-
-    socket.on("send_message", (data) => {
-        const receiverSocket = onlineUsers[data.receiverId];
-        if (receiverSocket) {
-            io.to(receiverSocket).emit("received message : ", data);
-        }
-    });
-
-    socket.on("disconnect", () => {
-        for (const [userId, socketId] of Object.entries(onlineUsers)) {
-            if (socketId === socket.id) {
-                delete onlineUsers[userId];
-                break;
+export function setupSocketEvents(io) {
+    io.on('connection', (socket) => {
+        console.log("User connected => " + socket.id);
+    
+        socket.on("add_user", (userId) => {
+            onlineUsers[userId] = socket.id
+        });
+    
+        socket.on("send_message", (data) => {
+            console.log("Message received to send:", data);  // Log incoming data
+            const receiverSocket = onlineUsers[data.receiverId];
+            if (receiverSocket) {
+                io.to(receiverSocket).emit("received_message", data);
             }
-        }
+        });
+    
+        socket.on("disconnect", () => {
+            for (const [userId, socketId] of Object.entries(onlineUsers)) {
+                if (socketId === socket.id) {
+                    delete onlineUsers[userId];
+                    break;
+                }
+            }
+        });
+    
+        console.log("User disconnected => " + socket.id);
     });
 
-    console.log("User disconnected => " + socket.id);
-});
+};
 
 router.post('/api/storeMessages', async (req, res) => {
     try {

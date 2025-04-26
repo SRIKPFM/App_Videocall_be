@@ -19,7 +19,7 @@ export const UserLoginCredentials = mongoose.model(
             lockedUserChat: [{
                 userName: String,
                 userId: String,
-                password: String
+                password: Number
             }]
         },
         {

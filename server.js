@@ -3,7 +3,10 @@ import mongoose from 'mongoose';
 import dotenv from 'dotenv';
 import cors from 'cors';
 import bodyParser from 'body-parser';
+import http from 'http';
+import { Server } from 'socket.io';
 import { initiateApp } from './src/Helper/apiHelper.js';
+import { setupSocketEvents } from './src/routes/MessageRouters.js';
 dotenv.config();
 
 const app = express();
@@ -21,6 +24,16 @@ mongoose.connect(process.env.MONGODBURI)
 .catch((error) => console.log("Database not connected successfully.."));
 
 initiateApp(app);
+
+const server = http.createServer(app);
+const io = new Server(server, {
+    cors: {
+        origin: "*",
+        methods: ["GET", "POST"]
+    }
+});
+
+setupSocketEvents(io);
 
 app.listen(port, () => {
     console.log(`Server successfully running on port ${port}`);

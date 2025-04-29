@@ -19,8 +19,13 @@ export const UserLoginCredentials = mongoose.model(
             lockedUserChat: [{
                 userName: String,
                 userId: String,
-                password: Number
-            }]
+                password: String
+            }],
+            archivedUser:[{
+                userName: String,
+                userId: String
+            }],
+            passwordForArchive: String
         },
         {
             timestamps: true

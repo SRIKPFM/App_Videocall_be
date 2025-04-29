@@ -90,7 +90,10 @@ router.post('/api/updateMessage', async (req, res) => {
         const findMessage = await MessageSchema.findOne({ messageId: messageId });
         if (!findMessage) { return res.status(404).json({ success: false, error: "Can't find message." })}
         const updateMessage = await MessageSchema.updateOne({ messageId: messageId }, { $set: req.body }, { new : true})
-        .then((data) => { return res.status(200).json({ success: true, message: "Message updated successfully..", data: data })})
+        .then( async (data) => { 
+            const finalData = await MessageSchema.findOne({ messageId: messageId }, { __v: 0, _id: 0 });
+            return res.status(200).json({ success: true, message: "Message updated successfully..", data: finalData });
+        })
         .catch((error) => { return res.status(400).json({ success: false, error: error.message })});
     } catch (error) {
         return res.status(500).json({ success: false, error: error.message });

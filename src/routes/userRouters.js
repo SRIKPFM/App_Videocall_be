@@ -1,4 +1,5 @@
 import express from 'express';
+import bcrypt from 'bcrypt';
 import { UserLoginCredentials } from '../models/loginModels.js';
 import { ContactDetails } from '../models/contactsModels.js';
 
@@ -22,7 +23,8 @@ router.post('/api/userRegister', async (req, res) => {
                     email: email,
                     password: password,
                     fcmToken: null,
-                    isLoggedin: false
+                    isLoggedin: false,
+                    passwordForArchive: null
                 })
                 userStructure.save()
                     .then(() => { return res.status(200).json({ success: true, message: "User registered successfully..!!" })});
@@ -122,6 +124,78 @@ router.post('/api/unPinUser', async (req, res) => {
         isUserExcist.pinedUsers = isUserPined;
         isUserExcist.save();
         return res.status(200).json({ success: true, message: "User unpined successfully.." });
+    } catch (error) {
+        return res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+router.post('/api/lockUserChat', async (req, res) => {
+    try {
+        const { userId, userIdForLock, userName, password, confirmPassword } = req.body;
+        const isUserExcist = await UserLoginCredentials.findOne({ userId: userId });
+        if (!isUserExcist) {
+            return res.status(404).json({ success: false, error: "User not found..!!" });
+        }
+        const isUserChatLocked = isUserExcist.lockedUserChat.find((data) => data.userId === userIdForLock);
+        console.log(isUserChatLocked)
+        if (isUserChatLocked) { return res.status(400).json({ success: false, error: "Already you have locked this user chat..!!" }) }
+        if (password !== confirmPassword) { return res.status(400).json({ success: false, error: "Password doesn't same..!!" }) }
+        const hashPassword = await bcrypt.hash(password.toString(), 10);
+        const newLockEntry = {
+            userName: userName,
+            userId: userIdForLock,
+            password: hashPassword
+        }
+        const addUserToChatLock = isUserExcist.lockedUserChat.push(newLockEntry);
+        isUserExcist.save()
+        .then(() => { return res.status(200).json({ success: true, message: "User Chat Locked successfully..!!" })})
+        .catch((error) => { return res.status(400).json({ success: false, error: error.message })})
+    } catch (error) {
+        return res.status(500).json({ success: true, error: error.message });
+    }
+});
+
+router.post('/api/getAllChatLockedUser', async (req, res) => {
+    try {
+        const {userId} = req.body;
+        const getAllChatLockedUser = await UserLoginCredentials.findOne({ userId: userId });
+        if (!getAllChatLockedUser) { return res.status(404).json({ success: true, error: "Usern't found.." })}
+        return res.status(200).json({ success: true, data: getAllChatLockedUser.lockedUserChat });
+    } catch (error) {  
+        return res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+router.post('/api/createOrChangeArchivePassword', async (req, res) => {
+    try {
+        const { userId, password, confirmPassword } = req.body;
+        const isUserExcist = await UserLoginCredentials.findOne({ userId: userId });
+        if (!isUserExcist) { return res.status(404).json({ success: false, error: "User not found..!!" })};
+        const hashedPassword = await bcrypt.hash(password, 10);
+        if (isUserExcist.passwordForArchive === null) {
+            if (password === confirmPassword) {
+                isUserExcist.passwordForArchive = hashedPassword
+            }
+        } else {
+            const unHashPassword = await bcrypt.compare(password, isUserExcist.passwordForArchive)
+            console.log(unHashPassword)
+            if (unHashPassword === true) {
+                return res.status(400).json({ success: false, error: "The new password can't same as old password..!!" });
+            } else {
+                isUserExcist.passwordForArchive = hashedPassword
+            }
+        }
+        await isUserExcist.save()
+        .then(() => { return res.status(200).json({ success: true, message: "Password created or changed successfully..!!" })})
+        .catch((error) => { return res.status(400).json({ success: false, error: error.message })});
+    } catch (error) {
+        return res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+router.post('/api/addUserIntoArchive', async (req, res) => {
+    try {
+
     } catch (error) {
         return res.status(500).json({ success: false, error: error.message });
     }

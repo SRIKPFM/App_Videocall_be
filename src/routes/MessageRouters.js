@@ -43,7 +43,7 @@ export function setupSocketEvents(io) {
 
 router.post('/api/storeMessages', async (req, res) => {
     try {
-        const { senderId, receiverId, text, imageUrl, videoUrl, documentUrl } = req.body;
+        const { senderId, receiverId, text, imageUrl, videoUrl, audioUrl, documentUrl } = req.body;
         if (!senderId || !receiverId) { return res.status(400).json({ success: false, error: "senderId or receiverId is required..!!" })};
         const createMessage = {
             messageId: uuidv4(),
@@ -53,6 +53,7 @@ router.post('/api/storeMessages', async (req, res) => {
                 text: text ? text : null,
                 imageUrl: imageUrl ? imageUrl : null,
                 videoUrl: videoUrl ? videoUrl : null,
+                audioUrl: audioUrl ? audioUrl : null,
                 documentUrl: documentUrl ? documentUrl : null
             },
             isPined: false

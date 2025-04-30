@@ -13,6 +13,7 @@ export const MessageSchema = mongoose.model(
                 text: String,
                 imageUrl: String,
                 videoUrl: String,
+                audioUrl: String,
                 documentUrl: String,
                 timeStamp: { type: Date, default: Date.now }
             },

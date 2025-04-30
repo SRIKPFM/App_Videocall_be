@@ -136,22 +136,46 @@ router.post('/api/lockUserChat', async (req, res) => {
         if (!isUserExcist) {
             return res.status(404).json({ success: false, error: "User not found..!!" });
         }
-        const isUserChatLocked = isUserExcist.lockedUserChat.find((data) => data.userId === userIdForLock);
-        console.log(isUserChatLocked)
-        if (isUserChatLocked) { return res.status(400).json({ success: false, error: "Already you have locked this user chat..!!" }) }
-        if (password !== confirmPassword) { return res.status(400).json({ success: false, error: "Password doesn't same..!!" }) }
-        const hashPassword = await bcrypt.hash(password.toString(), 10);
-        const newLockEntry = {
-            userName: userName,
-            userId: userIdForLock,
-            password: hashPassword
+        const userContactDetail = await ContactDetails.findOne({ userId: userId });
+        const isReceiverExcist = userContactDetail.userContactDetails.find((data) => data.idNumber === userIdForLock );
+        if (!isReceiverExcist) {
+            return res.status(404).json({ success: false, error: "Receiver not in the user's contact list..!!" });
         }
-        const addUserToChatLock = isUserExcist.lockedUserChat.push(newLockEntry);
-        isUserExcist.save()
-        .then(() => { return res.status(200).json({ success: true, message: "User Chat Locked successfully..!!" })})
-        .catch((error) => { return res.status(400).json({ success: false, error: error.message })})
+        const isUserChatLocked = isUserExcist.lockedUserChat.find((data) => data.userId === userIdForLock);
+        if (isUserChatLocked) { return res.status(400).json({ success: false, error: "Already you have locked this user chat..!!" }) }
+        if (password.toString().split('').length === 4) { 
+            const hashPassword = await bcrypt.hash(password.toString(), 10);
+            const newLockEntry = {
+                userName: userName,
+                userId: userIdForLock,
+                password: hashPassword
+            }
+            const addUserToChatLock = isUserExcist.lockedUserChat.push(newLockEntry);
+            isUserExcist.save()
+            .then(() => { return res.status(200).json({ success: true, message: "User Chat Locked successfully..!!" })})
+            .catch((error) => { return res.status(400).json({ success: false, error: error.message })})
+        }
+        return res.status(400).json({ success: false, error: "The password must be a 4-digit number."})
     } catch (error) {
         return res.status(500).json({ success: true, error: error.message });
+    }
+});
+
+router.post('/api/unlockUserChat', async (req, res) => {
+    try {
+        const { userId, userIdForLock, password } = req.body;
+        const userDetails = await UserLoginCredentials.findOne({ userId: userId });
+        const isUserChatLocked = userDetails.lockedUserChat.find((data) => data.userId === userIdForLock);
+        if (!isUserChatLocked) {
+            return res.status(400).json({ success: false, error: "This user chat hasn't locked yet..!!"})
+        }
+        const hashedPassword = await bcrypt.compare(password, isUserChatLocked.password);
+        if (!hashedPassword) {
+            return res.status(400).json({ success: false, error: "Please enter the correct pin..!!" });
+        }
+        return res.status(200).json({ success: true, message: "You have successfully unlocked.." });
+    } catch (error) {
+        return res.status(500).json({ success: false, error: error.message });
     }
 });
 

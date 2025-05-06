@@ -17,8 +17,20 @@ export const MessageSchema = mongoose.model(
                 documentUrl: String,
                 timeStamp: { type: Date, default: Date.now }
             },
-            isPined: Boolean
+            isPined: Boolean,
+            isMessageDelivered: { type: String, enum: [ 'sent', 'delivered', 'read' ], default: 'sent'},
+            isMessageReaded: { type: Boolean, default: false}
         }
     ),
     "MessageSchema"
+);
+
+export const UnReadMessages = mongoose.model(
+    "UnReadMessages",
+    new Schema(
+        {
+            userId: String,
+            messageIds: Array
+        }
+    )
 );

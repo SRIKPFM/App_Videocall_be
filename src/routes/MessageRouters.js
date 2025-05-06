@@ -10,23 +10,61 @@ const router = express.Router();
 const storage = multer.memoryStorage();
 const upload = multer({ storage });
 
-let onlineUsers = {};
+let onlineUsers = new Map();
 
 export function setupSocketEvents(io) {
     io.on('connection', (socket) => {
         console.log("User connected => " + socket.id);
 
-        socket.on("add_user", (userId) => {
-            onlineUsers[userId] = socket.id
+        socket.on('userOnline', async (userId) => {
+            onlineUsers.set(userId, socket.id);
+            console.log(`User ${userId} is online.`);
+
+            const pendingMessages = await MessageSchema.find({ receiverId: userId, isMessageDelivered: 'sent' });
+
+            pendingMessages.forEach(async (msg) => {
+                socket.emit('newMessage', msg);
+
+                await MessageSchema.updateOne({ messageId: msg.messageId }, { status: 'delivered' });
+            });
+        })
+
+        socket.on("send_message", async (data) => {
+            const { senderId, receiverId, text, imageUrl, videoUrl, audioUrl, documentUrl } = data;
+            const newMessage = new MessageSchema({
+                messageId: uuidv4(),
+                senderId: senderId,
+                receiverId: receiverId,
+                content: {
+                    text: text ? text : null,
+                    imageUrl: imageUrl ? imageUrl : null,
+                    videoUrl: videoUrl ? videoUrl : null,
+                    audioUrl: audioUrl ? audioUrl : null,
+                    documentUrl: documentUrl ? documentUrl : null
+                },
+                status: onlineUsers.has(receiverId) ? 'delivered' : 'sent'
+            });
+
+            await newMessage.save();
+
+            if (onlineUsers.has(receiverId)) {
+                io.to(onlineUsers.get(receiverId)).emit('newMessage', newMessage);
+            }
+
+            io.to(socket.id).emit('messageStatus', { messageId, status: newMessage.status });
         });
 
-        socket.on("send_message", (data) => {
-            console.log("Message received to send:", data);  // Log incoming data
-            const receiverSocket = onlineUsers[data.receiverId];
-            if (receiverSocket) {
-                io.to(receiverSocket).emit("received_message", data);
+        socket.on('messagesRead', async ({ userId, chatWithUserId }) => {
+            const updated = await MessageSchema.updateMany(
+                { senderId: chatWithUserId, receiverId: userId, status: { $in: ['sent', 'delivered'] } },
+                { status: 'read', isMessageReaded: true }
+            );
+
+            const senderSocketId = onlineUsers.get(chatWithUserId);
+            if (senderSocketId) {
+                io.to(senderSocketId).emit('messageReadNotification', { from: userId })
             }
-        });
+        })
 
         socket.on("disconnect", () => {
             for (const [userId, socketId] of Object.entries(onlineUsers)) {
@@ -42,30 +80,32 @@ export function setupSocketEvents(io) {
 
 };
 
-router.post('/api/storeMessages', async (req, res) => {
-    try {
-        const { senderId, receiverId, text, imageUrl, videoUrl, audioUrl, documentUrl } = req.body;
-        if (!senderId || !receiverId) { return res.status(400).json({ success: false, error: "senderId or receiverId is required..!!" }) };
-        const createMessage = {
-            messageId: uuidv4(),
-            senderId: senderId,
-            receiverId: receiverId,
-            content: {
-                text: text ? text : null,
-                imageUrl: imageUrl ? imageUrl : null,
-                videoUrl: videoUrl ? videoUrl : null,
-                audioUrl: audioUrl ? audioUrl : null,
-                documentUrl: documentUrl ? documentUrl : null
-            },
-            isPined: false
-        };
-        const storeMessages = await MessageSchema.create(createMessage)
-            .then((data) => { return res.status(200).json({ success: true, message: "Message stored successfully..", data: data }) })
-            .catch((error) => { return res.status(400).json({ success: false, error: error }) });
-    } catch (error) {
-        return res.status(500).json({ success: false, error: error.message });
-    }
-});
+// router.post('/api/storeMessages', async (req, res) => {
+//     try {
+//         const { senderId, receiverId, text, imageUrl, videoUrl, audioUrl, documentUrl } = req.body;
+//         const isUserExcist = await UserLoginCredentials.findOne({ userId: senderId });
+//         if (!isUserExcist) { return res.status(404).json({ success: fasle, error: "User not found..!!" })};
+//         if (!senderId || !receiverId) { return res.status(400).json({ success: false, error: "senderId or receiverId is required..!!" }) };
+//         const createMessage = {
+//             messageId: uuidv4(),
+//             senderId: senderId,
+//             receiverId: receiverId,
+//             content: {
+//                 text: text ? text : null,
+//                 imageUrl: imageUrl ? imageUrl : null,
+//                 videoUrl: videoUrl ? videoUrl : null,
+//                 audioUrl: audioUrl ? audioUrl : null,
+//                 documentUrl: documentUrl ? documentUrl : null
+//             },
+//             isPined: false
+//         };
+//         const storeMessages = await MessageSchema.create(createMessage)
+//             .then((data) => { return res.status(200).json({ success: true, message: "Message stored successfully..", data: data }) })
+//             .catch((error) => { return res.status(400).json({ success: false, error: error }) });
+//     } catch (error) {
+//         return res.status(500).json({ success: false, error: error.message });
+//     }
+// });
 
 router.post('/api/getMessages', async (req, res) => {
     try {
@@ -115,34 +155,101 @@ router.post('/api/deleteMessage', async (req, res) => {
 
 router.get('/api/recentChats/:userId', async (req, res) => {
     try {
-      const userId = req.params.userId;
-  
-      const messages = await MessageSchema.find({
-        $or: [
-          { senderId: userId },
-          { receiverId: userId }
-        ]
-      }).sort({ 'content.timeStamp': -1 }).lean();
-  
-      const recentChatsMap = {};
-  
-      messages.forEach(msg => {
-        const otherUserId = msg.senderId === userId ? msg.receiverId : msg.senderId;
-        if (!recentChatsMap[otherUserId]) {
-          recentChatsMap[otherUserId] = msg;
-        }
-      });
-  
-      const recentChats = Object.values(recentChatsMap);
-  
-      return res.json({ success: true, messages: recentChats });
+        const userId = req.params.userId;
+
+        //   const messages = await MessageSchema.find({
+        //     $or: [
+        //       { senderId: userId },
+        //       { receiverId: userId }
+        //     ]
+        //   }).sort({ 'content.timeStamp': -1 }).lean();
+
+        //   const recentChatsMap = {};
+
+        //   messages.forEach(msg => {
+        //     const otherUserId = msg.senderId === userId ? msg.receiverId : msg.senderId;
+        //     if (!recentChatsMap[otherUserId]) {
+        //       recentChatsMap[otherUserId] = msg;
+        //     }
+        //   });
+
+        //   const recentChats = Object.values(recentChatsMap);
+
+        const recentChats = await MessageSchema.aggregate([
+            {
+                $match: {
+                    $or: [
+                        { senderId: userId },
+                        { receiverId: userId }
+                    ]
+                }
+            },
+            {
+                $sort: { 'content.timeStamp': -1 }
+            },
+            {
+                $addFields: {
+                    lastMessage: {
+                        $cond: [
+                            { $ifNull: ["$content.text", false] }, "$content.text",
+                            {
+                                $cond: [
+                                    { $ifNull: ["$content.imageUrl", false] }, "[Photo]",
+                                    {
+                                        $cond: [
+                                            { $ifNull: ["$content.videoUrl", false] }, "[Video]",
+                                            {
+                                                $cond: [
+                                                    { $ifNull: ["$content.audioUrl", false] }, "[Audio]",
+                                                    {
+                                                        $cond: [
+                                                            { $ifNull: ["$content.documentUrl", false] }, "[Document]",
+                                                            "[Unknown]"
+                                                        ]
+                                                    }
+                                                ]
+                                            }
+                                        ]
+                                    }
+                                ]
+                            }
+                        ]
+                    }
+                }
+            },
+            {
+                $group: {
+                    _id: {
+                        $cond: [
+                            { $eq: ["$senderId", userId] },
+                            "$receiverId",
+                            "$senderId"
+                        ]
+                    },
+                    lastMessage: { $first: "$lastMessage" },
+                    timeStamp: { $first: "$content.timeStamp" },
+                    unreadCount: {
+                        $sum: {
+                            $cond: [
+
+                                { $and: [{ $eq: ["$receiverId", userId] }, { $eq: ["$isMessageReaded", false] }] },
+                                1,
+                                0
+                            ]
+                        }
+                    }
+                }
+            },
+            {
+                $sort: { timeStamp: -1 }
+            }
+        ])
+
+        return res.json({ success: true, messages: recentChats });
     } catch (error) {
-      return res.status(500).json({ success: false, error: error.message });
+        return res.status(500).json({ success: false, error: error.message });
     }
-  });
-  
-  
-  
+});
 
 router.post('/api/uploadFiles', upload.single('file'), async (req, res) => {
     try {
@@ -173,5 +280,45 @@ router.post('/api/uploadFiles', upload.single('file'), async (req, res) => {
         return res.status(500).json({ success: false, error: error.message });
     }
 });
+
+router.post('/api/unreadCount/:userId', async (req, res) => {
+    try {
+        const userId = req.params.userId;
+        const unreadCounts = await MessageSchema.aggregate([
+            { $match: { receiverId: userId, isMessageReaded: false } },
+            {
+                $group: {
+                    _id: "senderId",
+                    count: { $sum: 1 }
+                }
+            }
+        ]);
+        if (!unreadCounts) {
+            return res.status(404).json({ success: false, error: "Can't get or There is no unread message." });
+        }
+        return res.status(200).json({ success: true, unreadCounts });
+    } catch (error) {
+        return res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// router.post('/api/updateMessageDeveliryStatus', async (req, res) => {
+//     try {
+//         const { userId, messageId } = req.body;
+//         const isUserExcist = await UserLoginCredentials.findOne({ userId: userId });
+//         if (!isUserExcist) { return res.status(404).json({ success: false, error: "User not found..!!" })};
+//         if (isUserExcist.status === true) {
+//             const updateAllMessages = await MessageSchema.updateMany({ messageId: { $in: messageId }}, { $set: { isMessageDelivered: true }});
+//             if (!updateAllMessages) {
+//                 return res.status(400).json({ success: false, error: "Error occurred while updating message status..!!" });
+//             }
+//             return res.status(200).json({ success: true, message: "Message updated successfully..!!" });
+//         } else {
+//             return res.status(400).json({ success: false, error: "User not in online..!!" });
+//         }
+//     } catch (error) {
+//         return res.status(500).json({ success: fasle, error: error.message });
+//     }
+// });
 
 export default router;

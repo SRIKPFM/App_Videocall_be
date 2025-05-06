@@ -225,4 +225,18 @@ router.post('/api/addUserIntoArchive', async (req, res) => {
     }
 });
 
+router.post('/api/updateOnlineStatus', async (req, res) => {
+    try {
+        const { userId, status } = req.body;
+        const isUserExcist = await UserLoginCredentials.findOne({ userId: userId });
+        if (!isUserExcist) { return res.status(404).json({ success: false, error: "User not found..!!" })};
+        isUserExcist.status = status;
+        await isUserExcist.save()
+        .then(() => { return res.status(200).json({ success: true, message: "User status updated successfully..!!" })})
+        .catch((error) => { return res.status(400).json({ success: false, error: error.message })});
+    } catch (error) {
+        return res.status(500).json({ success: false, error: error.message });
+    }
+});
+
 export default router;

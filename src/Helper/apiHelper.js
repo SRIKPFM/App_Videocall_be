@@ -5,6 +5,7 @@ import agoraRoutes from '../routes/agoraRouters.js';
 import fcmRoutes from '../routes/fcmRouters.js';
 import messageRoutes from '../routes/MessageRouters.js';
 import cloudinaryRoutes from '../routes/cloudinary.js';
+import tdlRoutes from '../routes/todolistRouters.js';
 
 export const initiateApp = (expressApp) => {
 
@@ -21,4 +22,6 @@ export const initiateApp = (expressApp) => {
     expressApp.use(messageRoutes);
 
     expressApp.use(cloudinaryRoutes);
+
+    expressApp.use(tdlRoutes);
 };

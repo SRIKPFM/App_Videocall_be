@@ -69,8 +69,8 @@ router.post('/api/updateTdlStatus', async (req, res) => {
 
 router.post('/api/getTodos', async (req, res) => {
     try {
-        const { userId, type } = req.body;
-        const getTodos = await TodolistSchema.find({ userId: userId, status: type }, { __v: 0, _id: 0, createdAt: 0, updatedAt: 0 });
+        const { userId } = req.body;
+        const getTodos = await TodolistSchema.find({ userId: userId }, { __v: 0, _id: 0, createdAt: 0, updatedAt: 0 });
         if (getTodos.length === 0) {
             return res.status(404).json({ success: false, error: "There is no Todos for this user", data: [] })
         } 

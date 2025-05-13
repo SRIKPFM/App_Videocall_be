@@ -1,18 +1,18 @@
 import express from 'express';
 import multer from 'multer';
+import cron from 'node-cron';
 import { v4 as uuidv4 } from 'uuid';
 import { bucket } from '../Helper/fcm.js';
 import { MessageSchema } from '../models/MessageModels.js';
 import { UserLoginCredentials } from '../models/loginModels.js';
+import { TodolistSchema } from '../models/todolistModels.js';
 
 const router = express.Router();
 
 const storage = multer.memoryStorage();
 const upload = multer({ storage });
 
-let onlineUsers = new Map();
-
-export function setupSocketEvents(io) {
+export function setupSocketEvents(io, onlineUsers) {
     io.on('connection', (socket) => {
         console.log("User connected => " + socket.id);
 
@@ -320,5 +320,13 @@ router.post('/api/unreadCount/:userId', async (req, res) => {
 //         return res.status(500).json({ success: fasle, error: error.message });
 //     }
 // });
+
+router.post('/api/createGroupChat', async (req, res) => {
+    try {
+        const { } = req.body;
+    } catch (error) {
+        return res.status(500).json({ success: false, error: error.message })
+    }
+});
 
 export default router;

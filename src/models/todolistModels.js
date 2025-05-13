@@ -14,6 +14,7 @@ export const TodolistSchema = mongoose.model(
             imageUrl: String,
             alarm: Date,
             voiceUrl: String,
+            targetedUserId: { type: String, default: null },
             status: { type: String, enum: [ 'Completed', 'Today', 'Upcoming' ], default: "Future" }
         },
         { 

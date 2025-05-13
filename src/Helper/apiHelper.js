@@ -6,6 +6,7 @@ import fcmRoutes from '../routes/fcmRouters.js';
 import messageRoutes from '../routes/MessageRouters.js';
 import cloudinaryRoutes from '../routes/cloudinary.js';
 import tdlRoutes from '../routes/todolistRouters.js';
+import groupMessageRoutes from '../routes/groupMessageRouters.js';
 
 export const initiateApp = (expressApp) => {
 
@@ -24,4 +25,6 @@ export const initiateApp = (expressApp) => {
     expressApp.use(cloudinaryRoutes);
 
     expressApp.use(tdlRoutes);
+
+    expressApp.use(groupMessageRoutes);
 };

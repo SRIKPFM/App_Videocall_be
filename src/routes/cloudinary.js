@@ -1,6 +1,7 @@
 import express from 'express';
 import multer from 'multer';
 import fs from 'fs';
+import path from 'path';
 import { v2 as cloudinary } from "cloudinary";
 import { getFolderByMimeType } from '../Helper/helper.js';
 
@@ -20,10 +21,15 @@ router.post('/api/upload', upload.single('file'), async (req, res) => {
         const filePath = req.file.path;
         const mimetype = req.file.mimetype;
         const folder = getFolderByMimeType(mimetype);
+        console.log(folder)
+
+        const originalNameWithExt = path.parse(req.file.originalname);
+        console.log(originalNameWithExt);
 
         const result = await cloudinary.uploader.upload(filePath, {
-            resource_type: 'auto',
-            folder: `${folder}/${senderId}-To-${receiverId}`
+            resource_type: folder === "documents" ? 'raw' : ( folder === "images" ? 'image' : ( folder === "videos" ? 'video' : 'audio' )),
+            folder: `${folder}/${senderId}-To-${receiverId}`,
+            public_id: `${originalNameWithExt.name}${originalNameWithExt.ext}`
         });
         console.log(result);
 
@@ -48,7 +54,7 @@ router.post('/api/uploadTodolistFiles', upload.single('file'), async (req, res) 
         const folder = getFolderByMimeType(mimetype);
 
         const result = await cloudinary.uploader.upload(filePath, {
-            resource_type: 'auto',
+            resource_type: folder === "documents" ? 'raw' : ( folder === "images" ? 'image' : ( folder === "videos" ? 'video' : 'audio' )),
             folder: `Todolist/${userId}`
         });
         console.log(result);

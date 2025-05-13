@@ -4,9 +4,13 @@ import dotenv from 'dotenv';
 import cors from 'cors';
 import bodyParser from 'body-parser';
 import http from 'http';
+import cron from 'node-cron';
 import { Server } from 'socket.io';
 import { initiateApp } from './src/Helper/apiHelper.js';
-import { setupSocketEvents } from './src/routes/MessageRouters.js';
+import { initiateSocketServer } from './src/Helper/socketManger.js';
+import { onlineUsers } from './src/Helper/socketManger.js';
+import { MessageSchema } from './src/models/MessageModels.js';
+import { TodolistSchema } from './src/models/todolistModels.js';
 dotenv.config();
 
 const app = express();
@@ -33,7 +37,49 @@ const io = new Server(server, {
     }
 });
 
-setupSocketEvents(io);
+initiateSocketServer(io);
+
+cron.schedule('* * * * *', async () => {
+    console.log("⏰ Checking for due reminders...");
+
+    const today = new Date();
+    const dueRemainders = await TodolistSchema.find({
+        alarm: { $lte:  today },
+        status: 'Upcoming'
+    });
+
+    for (const remainder of dueRemainders) {
+        const senderId = remainder.userId;
+        const receiverId = remainder.targetedUserId;
+
+        const remainderMessage = new MessageSchema({ 
+            messageId: uuidv4(),
+            senderId: senderId,
+            receiverId: receiverId,
+            content: {
+                text: remainder.text || "You have a remainder..!!",
+                imageUrl: null,
+                videoUrl: null,
+                audioUrl: null,
+                location: null,
+                documentUrl: null
+            },
+            isPined: false,
+            isMessageDelivered: onlineUsers.has(receiverId) ? 'delivered' : 'sent',
+            isMessageReaded: false
+        });
+
+        await remainderMessage.save();
+
+    if (onlineUsers.has(receiverId)) {
+        const receiverSocketId = onlineUsers.get(receiverId);
+        io.to(receiverSocketId).emit('newMessage', remainderMessage);
+        console.log(`✅ Sent reminder to ${receiverId}: ${remainderMessage.content.text}`)
+    } else {
+        console.log(`⚠️ User ${receiverId} is offline. Saved reminder message.`);
+    }
+    }
+});
 
 app.listen(port, () => {
     console.log(`Server successfully running on port ${port}`);

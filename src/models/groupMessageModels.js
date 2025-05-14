@@ -12,6 +12,7 @@ export const groupSchema = mongoose.model(
             createrId: String,
             adminId: [String],
             members: [String],
+            isAdminOnly: { type: Boolean, default: false },
             createdAt: { type: Date, default: Date.now }
         }
     ),
@@ -33,6 +34,8 @@ export const groupMessageSchema = mongoose.model(
                 documentUrl: { type: String, default: null },
                 location: { type: String, default: null }
             },
+            deleteForMe: [{ type: String }],
+            isDeleteForEveryone: { type: Boolean, default: false },
             createdAt: { type: Date, default: Date.now }
         }
     ),

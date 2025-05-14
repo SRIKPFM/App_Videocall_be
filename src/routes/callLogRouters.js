@@ -41,15 +41,15 @@ router.post('/api/getCallLogs', async (req, res) => {
     try {
         const { type, userId, recevierId } = req.body;
         if (type === "Incoming call") {
-            const getIncomingCalls = await CallLogDetails.find({ recevierId : userId })
+            const getIncomingCalls = await CallLogDetails.find({ recevierId : userId },{ _id: 0, __v: 0 })
             .then((data) => { return res.status(200).json({ success: true, data: data })})
             .catch((error) => { return res.status(404).json({ success: false, error: "Can't find user Incoming call details..!!" })})
         } else if ( type === "Outgoing call") {
-            const getOutgoingCalls = await CallLogDetails.find({ callerId: userId })
+            const getOutgoingCalls = await CallLogDetails.find({ callerId: userId },{ _id: 0, __v: 0 })
             .then((data) => { return res.status(200).json({ success: true, data: data })})
             .catch((error) => { return res.status(404).json({ success: false, error: "Can't find user Outgoing call details..!!" })})
         } else if ( type === "Missed call") {
-            const getMissedCalls = await CallLogDetails.find({ recevierId: userId })
+            const getMissedCalls = await CallLogDetails.find({ recevierId: userId },{ _id: 0, __v: 0 })
             .then((data) => { return res.status(200).json({ success: true, data: data })})
             .catch((error) => { return res.status(404).json({ success: false, error: "Can't find user Outgoing call details..!!" })})
         }

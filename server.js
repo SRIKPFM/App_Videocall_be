@@ -81,6 +81,6 @@ cron.schedule('* * * * *', async () => {
     }
 });
 
-app.listen(port, () => {
+server.listen(port, () => {
     console.log(`Server successfully running on port ${port}`);
 });

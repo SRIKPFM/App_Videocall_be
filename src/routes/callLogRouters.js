@@ -30,8 +30,8 @@ router.post('/api/saveCallLogs', async (req, res) => {
             duration: 0
         };
         const createCallLog = await CallLogDetails.create(callStructure)
-        .then((data) => { return res.status(200).json({ success: true, message: "Call log created successfully..", data: data })})
-        .catch((error) => { return res.status(404).json({ success: false, message: "Can't create call log.", error: error })});
+            .then((data) => { return res.status(200).json({ success: true, message: "Call log created successfully..", data: data }) })
+            .catch((error) => { return res.status(404).json({ success: false, message: "Can't create call log.", error: error }) });
     } catch (error) {
         res.status(500).json({ success: false, error: error.message });
     }
@@ -39,20 +39,15 @@ router.post('/api/saveCallLogs', async (req, res) => {
 
 router.post('/api/getCallLogs', async (req, res) => {
     try {
-        const { type, userId, recevierId } = req.body;
-        if (type === "Incoming call") {
-            const getIncomingCalls = await CallLogDetails.find({ recevierId : userId },{ _id: 0, __v: 0 })
-            .then((data) => { return res.status(200).json({ success: true, data: data })})
-            .catch((error) => { return res.status(404).json({ success: false, error: "Can't find user Incoming call details..!!" })})
-        } else if ( type === "Outgoing call") {
-            const getOutgoingCalls = await CallLogDetails.find({ callerId: userId },{ _id: 0, __v: 0 })
-            .then((data) => { return res.status(200).json({ success: true, data: data })})
-            .catch((error) => { return res.status(404).json({ success: false, error: "Can't find user Outgoing call details..!!" })})
-        } else if ( type === "Missed call") {
-            const getMissedCalls = await CallLogDetails.find({ recevierId: userId },{ _id: 0, __v: 0 })
-            .then((data) => { return res.status(200).json({ success: true, data: data })})
-            .catch((error) => { return res.status(404).json({ success: false, error: "Can't find user Outgoing call details..!!" })})
-        }
+        const { type, userId } = req.body;
+        const getIncomingCalls = await CallLogDetails.find({
+            $or: [
+                {callerId: userId},
+                {recevierId: userId}
+            ]
+        }, { _id: 0, __v: 0 })
+            .then((data) => { return res.status(200).json({ success: true, data: data }) })
+            .catch((error) => { return res.status(404).json({ success: false, error: "Can't find user Incoming call details..!!", data: error.message }) })
     } catch (error) {
         return res.status(500).json({ success: false, error: error.message });
     }
@@ -72,13 +67,13 @@ router.post('/api/updateCallLogs', async (req, res) => {
         findCallLog.isCalling = status === "accepted" ? true : false;
 
         if (findCallLog.startTime && findCallLog.endTime) {
-            findCallLog.duration = Math.floor((new Date(findCallLog.endTime) - new Date(findCallLog.startTime))/1000);
+            findCallLog.duration = Math.floor((new Date(findCallLog.endTime) - new Date(findCallLog.startTime)) / 1000);
         }
 
         await findCallLog.save()
-        .then((data) => console.log(data));
+            .then((data) => console.log(data));
         res.status(200).json({ success: true, message: findCallLog })
-        const callExcist = await CallLogDetails.findOne({ })
+        const callExcist = await CallLogDetails.findOne({})
     } catch (error) {
         return res.status(500).json({ success: false, error: error.message });
     }

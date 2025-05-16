@@ -2,6 +2,7 @@ import express from 'express';
 import { v4 as uuidv4 } from 'uuid';
 import { groupSchema } from '../models/groupMessageModels.js';
 import { groupMessageSchema } from '../models/groupMessageModels.js';
+import { isGroupExcist, isUserAdmin } from '../Helper/helper.js';
 
 const router = express.Router();
 
@@ -49,6 +50,7 @@ router.post('/api/createGroup', async (req, res) => {
         if (isGroupExcist) {
             return res.status(400).json({ success: false, error: "This name already excist.." });
         }
+        const totalMembers = members.unshift(createrId)
         const groupStructure = new groupSchema({
             groupId: uuidv4(),
             name: name,
@@ -65,39 +67,36 @@ router.post('/api/createGroup', async (req, res) => {
     }
 });
 
-// router.post('/api/storeGroupMessages', async (req, res) => {
-//     try {
-//         const { senderId, groupId, text, imageUrl, videoUrl, audioUrl, documentUrl } = req.body;
-//         const isUserExcist = await groupSchema.findOne({ groupId: groupId });
-//         if (!isUserExcist) { return res.status(404).json({ success: fasle, error: "group not found..!!" })};
-//         if (!senderId) { return res.status(400).json({ success: false, error: "senderId or receiverId is required..!!" }) };
-//         const createMessage = {
-//             messageId: uuidv4(),
-//             groupId: groupId,
-//             senderId: senderId,
-//             content: {
-//                 text: text ? text : null,
-//                 imageUrl: imageUrl ? imageUrl : null,
-//                 videoUrl: videoUrl ? videoUrl : null,
-//                 audioUrl: audioUrl ? audioUrl : null,
-//                 documentUrl: documentUrl ? documentUrl : null
-//             }
-//         };
-//         const storeMessages = await groupMessageSchema.create(createMessage)
-//             .then((data) => { return res.status(200).json({ success: true, message: "Message stored successfully..", data: data }) })
-//             .catch((error) => { return res.status(400).json({ success: false, error: error }) });
-//     } catch (error) {
-//         return res.status(500).json({ success: false, error: error.message });
-//     }
-// });
+router.post('/api/storeGroupMessages', async (req, res) => {
+    try {
+        const { senderId, groupId, text, imageUrl, videoUrl, audioUrl, documentUrl } = req.body;
+        const isUserExcist = await groupSchema.findOne({ groupId: groupId });
+        if (!isUserExcist) { return res.status(404).json({ success: fasle, error: "group not found..!!" }) };
+        if (!senderId) { return res.status(400).json({ success: false, error: "senderId or receiverId is required..!!" }) };
+        const createMessage = {
+            messageId: uuidv4(),
+            groupId: groupId,
+            senderId: senderId,
+            content: {
+                text: text ? text : null,
+                imageUrl: imageUrl ? imageUrl : null,
+                videoUrl: videoUrl ? videoUrl : null,
+                audioUrl: audioUrl ? audioUrl : null,
+                documentUrl: documentUrl ? documentUrl : null
+            }
+        };
+        const storeMessages = await groupMessageSchema.create(createMessage)
+            .then((data) => { return res.status(200).json({ success: true, message: "Message stored successfully..", data: data }) })
+            .catch((error) => { return res.status(400).json({ success: false, error: error }) });
+    } catch (error) {
+        return res.status(500).json({ success: false, error: error.message });
+    }
+});
 
 router.post('/api/getGroupMessages', async (req, res) => {
     try {
         const { groupId } = req.body;
-        const isGroupExcist = await groupSchema.findOne({ groupId: groupId });
-        if (!isGroupExcist) {
-            return res.status(404).json({ success: false, error: "Can't find group.." });
-        }
+        const findGroup = await isGroupExcist(groupId);
         const getGroupMessages = await groupMessageSchema.find({ groupId: groupId }, { _id: 0, __v: 0 })
             .sort({ createdAt: -1 });
         if (getGroupMessages.length === 0) {
@@ -128,17 +127,16 @@ router.post('/api/updateGroupMessage', async (req, res) => {
 router.post('/api/addAdmin', async (req, res) => {
     try {
         const { groupId, userId, selectedMembers } = req.body;
-        const isGroupExcist = await groupSchema.findOne({ groupId: groupId });
-        if (!isGroupExcist) { return res.status(404).json({ success: false, error: "There is no group..!!" }) };
-        if (!isGroupExcist.adminId.includes(userId)) {
-            return res.status(400).json({ success: false, error: "Only admin can add admin..!!" });
-        }
-        const admins = isGroupExcist.adminId.concat(selectedMembers);
-        isGroupExcist.adminId = admins;
+        const findGroup = await isGroupExcist(groupId);
+        const checkAdmin = await isUserAdmin(findGroup, userId);
+        if (checkAdmin === true) {
+            const admins = findGroup.adminId.concat(selectedMembers);
+            findGroup.adminId = admins;
 
-        await isGroupExcist.save()
-            .then(() => { return res.status(200).json({ success: true, message: "Admin added successfully..!!" }) })
-            .catch((error) => { return res.status(400).json({ success: false, error: error.message }) });
+            await findGroup.save()
+                .then(() => { return res.status(200).json({ success: true, message: "Admin added successfully..!!" }) })
+                .catch((error) => { return res.status(400).json({ success: false, error: error.message }) });
+        }
     } catch (error) {
         return res.status(500).json({ success: false, error: error.message });
     }
@@ -147,15 +145,101 @@ router.post('/api/addAdmin', async (req, res) => {
 router.post('/api/removeAdmin', async (req, res) => {
     try {
         const { groupId, userId, selectedMembers } = req.body;
-        const isGroupExcist = await groupSchema.findOne({ groupId: groupId });
-        if (!isGroupExcist) { return res.status(404).json({ success: false, error: "Can't find group.." }) };
-        if (!isGroupExcist.adminId.includes(userId)) {
-            return res.status(400).json({ success: false, error: "Only admin can add admin..!!" });
+        const findGroup = await isGroupExcist(groupId);
+        const checkAdmin = await isUserAdmin(findGroup, userId);
+        if (checkAdmin === true) {
+            const filteredMembers = findGroup.adminId.filter((data) => !selectedMembers.includes(data));
+            findGroup.adminId = filteredMembers;
+            await findGroup.save()
+                .then(() => { return res.status(200).json({ success: true, message: "Admin removed successfully..!!" }) })
+                .catch((error) => { return res.status(400).json({ success: false, error: error.message }) });
         }
-        
     } catch (error) {
         return res.status(500).json({ success: false, error: error.message });
     }
 });
 
-export default router; 
+router.post('/api/updateAdminOnly', async (req, res) => {
+    try {
+        const { groupId, userId, status } = req.body;
+        const findGroup = await isGroupExcist(groupId);
+        const checkAdmin = await isUserAdmin(findGroup, userId);
+        if (checkAdmin === true) {
+            findGroup.isAdminOnly = status;
+            await findGroup.save()
+                .then(() => { return res.status(200).json({ success: true, message: "Features updated successfully..!!" }) })
+                .catch((error) => { return res.status(400).json({ success: false, error: error.message }) });
+        }
+    } catch (error) {
+        return res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+router.post('/api/delete-for-me', async (req, res) => {
+    try {
+        const { groupId, userId, messageId } = req.body;
+        const findGroup = await isGroupExcist(groupId);
+
+        const deleteMessage = await groupMessageSchema.updateOne({ messageId: messageId }, { $addToSet: { deleteForMe: userId } });
+        if (!deleteMessage) {
+            return res.status(400).json({ success: false, error: "Error occurred while deleting message" });
+        }
+        return res.status(200).json({ success: true, message: "Message deleted successfully..!!" });
+    } catch (error) {
+        return res.status(500).json({ success: false, error: error.message })
+    }
+});
+
+router.post('/api/deleteForEveryone', async (req, res) => {
+    try {
+        const { groupId, userId, messageId } = req.body;
+        const findGroup = await isGroupExcist(groupId);
+        const findMessage = await groupMessageSchema.findOne({ messageId: messageId, groupId: groupId });
+        if (!findMessage) { return res.status(404).json({ success: false, error: "Can't find message..!!" }) }
+        if (findMessage.senderId !== userId) { return res.status(400).json({ success: false, error: "You're not authorized to delete this message..!!" }) }
+
+        const deleteMessage = await groupMessageSchema.updateOne({ messageId: messageId }, { isDeleteForEveryone: true });
+        if (!deleteMessage) {
+            return res.status(400).json({ success: false, error: "Error occurred while deleting message" });
+        }
+        return res.status(200).json({ success: true, message: "Message deleted successfully..!!" });
+    } catch (error) {
+        return res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+router.post('/api/recentGroupChat', async (req, res) => {
+    try {
+        const { groupId, userId } = req.body;
+
+        const message = await groupMessageSchema.find({ groupId: groupId, deleteFor: { $ne: userId } })
+            .sort({ createdAt: -1 })
+            .lean();
+
+        const filterMsg = message.map(msg => {
+            if (msg.isDeleteForEveryone && msg.senderId !== userId) {
+                return {
+                    ...msg,
+                    content: {
+                        text: 'This message was deleted',
+                        imageUrl: null,
+                        videoUrl: null,
+                        audioUrl: null,
+                        documentUrl: null
+                    },
+                    isDeleted: true
+                };
+            }
+            return msg;
+        });
+
+        if (!filterMsg) {
+            return res.status(400).json({ success: false, error: "Can't get messages..!!" });
+        }
+        return res.status(200).json({ success: true, data: filterMsg.reverse() });
+    } catch (error) {
+        // return res.
+    }
+});
+
+export default router;  

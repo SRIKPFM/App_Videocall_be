@@ -26,7 +26,7 @@ router.post('/api/userRegister', async (req, res) => {
                     isLoggedin: false,
                     passwordForArchive: null
                 })
-                userStructure.save()
+                const createUser = await UserLoginCredentials.create(userStructure)
                     .then(() => { return res.status(200).json({ success: true, message: "User registered successfully..!!" })});
             } else {
                 return res.status(404).json({ success: false, error: "Enter the correct passowrd..!!" });

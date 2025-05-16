@@ -31,8 +31,9 @@ export function setupSocketEvents(io, onlineUsers) {
 
         socket.on("send_message", async (data) => {
             const { senderId, receiverId, text, imageUrl, videoUrl, audioUrl, documentUrl } = data;
+            const messageId = uuidv4();
             const newMessage = new MessageSchema({
-                messageId: uuidv4(),
+                messageId: messageId,
                 senderId: senderId,
                 receiverId: receiverId,
                 content: {

@@ -158,24 +158,6 @@ router.get('/api/recentChats/:userId', async (req, res) => {
     try {
         const userId = req.params.userId;
 
-        //   const messages = await MessageSchema.find({
-        //     $or: [
-        //       { senderId: userId },
-        //       { receiverId: userId }
-        //     ]
-        //   }).sort({ 'content.timeStamp': -1 }).lean();
-
-        //   const recentChatsMap = {};
-
-        //   messages.forEach(msg => {
-        //     const otherUserId = msg.senderId === userId ? msg.receiverId : msg.senderId;
-        //     if (!recentChatsMap[otherUserId]) {
-        //       recentChatsMap[otherUserId] = msg;
-        //     }
-        //   });
-
-        //   const recentChats = Object.values(recentChatsMap);
-
         const recentChats = await MessageSchema.aggregate([
             {
                 $match: {

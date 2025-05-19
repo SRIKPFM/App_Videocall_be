@@ -36,7 +36,8 @@ export const groupMessageSchema = mongoose.model(
             },
             deleteFor: [{ type: String }],
             isDeleteForEveryone: { type: Boolean, default: false },
-            createdAt: { type: Date, default: Date.now }
+            readBy: [String],
+            timeStamp: { type: Date, default: Date.now }
         }
     ),
     "GroupMessageSchema"

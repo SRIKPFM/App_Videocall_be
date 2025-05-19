@@ -39,6 +39,18 @@ export function setupGroupChat(io, onlineUsers) {
                 io.to(groupId).emit('newGroupMessage', newMessage);
             }
         });
+
+        socket.on('groupMessageRead', async ({ groupId, userId }) => {
+            await groupMessageSchema.updateMany(
+                {
+                    groupId: groupId,
+                    readBy: { $ne: userId }
+                },
+                {
+                    $addToSet: { readBy: userId }
+                }
+            )
+        });
     })
 };
 
@@ -210,35 +222,95 @@ router.post('/api/deleteForEveryone', async (req, res) => {
 
 router.post('/api/recentGroupChat', async (req, res) => {
     try {
-        const { groupId, userId } = req.body;
+        const { userId } = req.body;
 
-        const message = await groupMessageSchema.find({ groupId: groupId, deleteFor: { $ne: userId } })
-            .sort({ createdAt: -1 })
-            .lean();
-
-        const filterMsg = message.map(msg => {
-            if (msg.isDeleteForEveryone && msg.senderId !== userId) {
-                return {
-                    ...msg,
-                    content: {
-                        text: 'This message was deleted',
-                        imageUrl: null,
-                        videoUrl: null,
-                        audioUrl: null,
-                        documentUrl: null
-                    },
-                    isDeleted: true
-                };
+        const recentGroupChat = await groupMessageSchema.aggregate([
+            {
+                $match: {
+                    $or: [
+                        { isDeleteForEveryone: { $exists: false } },
+                        { isDeleteForEveryone: false }
+                    ],
+                    deleteFor: { $ne: userId }
+                }
+            },
+            {
+                $sort: { timestamp : -1 }
+            },
+            {
+                $addFields: {
+                    lastMessage: {
+                        $cond: [
+                            { $ifNull: ["$content.text", false] }, "$content.text",
+                            {
+                                $cond: [
+                                    { $ifNull: ["$content.imageUrl", false] }, "[Photo]",
+                                    {
+                                        $cond: [
+                                            { $ifNull: ["$content.videoUrl", false] }, "[Video]",
+                                            {
+                                                $cond: [
+                                                    { $ifNull: ["$content.audioUrl", false] }, "[Audio]",
+                                                    {
+                                                        $cond: [
+                                                            { $ifNull: ["$content.documentUrl", false] }, "[Document]",
+                                                            "[Unknown]"
+                                                        ]
+                                                    }
+                                                ]
+                                            }
+                                        ]
+                                    }
+                                ]
+                            }
+                        ]
+                    }
+                }
+            },
+            {
+                $group: {
+                    _id: "$groupId",
+                    lastMessage: { $first: "$lastMessage" },
+                    timestamp: { $first: "$timeStamp" },
+                    unreadCount: {
+                        $sum: {
+                            $cond: [
+                                {
+                                    $and: [
+                                        { $ne: ["$senderId", userId] },
+                                        { $not: { $in: [userId, "$readBy"] } },
+                                        { $not: { $in: [userId, "$deleteFor"] } }
+                                    ]
+                                },
+                                1,
+                                0
+                            ]
+                        }
+                    }
+                }
+            },
+            { 
+                $sort: { timeStamp: -1 }
             }
-            return msg;
-        });
+        ]);
 
-        if (!filterMsg) {
-            return res.status(400).json({ success: false, error: "Can't get messages..!!" });
+        const groupIds = recentGroupChat.map(chat => chat._id);
+
+        const groups = await groupSchema.find({ groupId: { $in: groupIds }}).select('name').select('groupId').lean();
+
+        const groupMap = new Map(groups.map(g => [ g.groupId.toString(), g]));
+
+        const chatWithGroupName = recentGroupChat.map(chat => ({ 
+            ...chat,
+            groupName: groupMap.get(chat._id.toString())?.name || "Unknown Group"
+        }))
+
+        if (!chatWithGroupName) {
+            return res.status(400).json({ success: false, error: "Can't get any datas.." });
         }
-        return res.status(200).json({ success: true, data: filterMsg.reverse() });
+        return res.status(200).json({ success: true, data: chatWithGroupName });
     } catch (error) {
-        // return res.
+        return res.status(500).json({ success: false, error: error.message });
     }
 });
 

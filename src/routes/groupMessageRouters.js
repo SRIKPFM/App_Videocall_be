@@ -224,9 +224,14 @@ router.post('/api/recentGroupChat', async (req, res) => {
     try {
         const { userId } = req.body;
 
-        const recentGroupChat = await groupMessageSchema.aggregate([
+        const groups = await groupSchema.find({ members: userId }).lean();
+
+        const groupIds = groups.map(group => group.groupId);
+
+        const recentMessages = await groupMessageSchema.aggregate([
             {
                 $match: {
+                    groupId: { $in: groupIds },
                     $or: [
                         { isDeleteForEveryone: { $exists: false } },
                         { isDeleteForEveryone: false }
@@ -234,9 +239,7 @@ router.post('/api/recentGroupChat', async (req, res) => {
                     deleteFor: { $ne: userId }
                 }
             },
-            {
-                $sort: { timestamp : -1 }
-            },
+            { $sort: { timeStamp: -1 } },
             {
                 $addFields: {
                     lastMessage: {
@@ -271,7 +274,7 @@ router.post('/api/recentGroupChat', async (req, res) => {
                 $group: {
                     _id: "$groupId",
                     lastMessage: { $first: "$lastMessage" },
-                    timestamp: { $first: "$timeStamp" },
+                    timeStamp: { $first: "$timeStamp" },
                     unreadCount: {
                         $sum: {
                             $cond: [
@@ -288,27 +291,25 @@ router.post('/api/recentGroupChat', async (req, res) => {
                         }
                     }
                 }
-            },
-            { 
-                $sort: { timeStamp: -1 }
             }
         ]);
 
-        const groupIds = recentGroupChat.map(chat => chat._id);
+        const messageMap = new Map(recentMessages.map(m => [m._id.toString(), m]));
 
-        const groups = await groupSchema.find({ groupId: { $in: groupIds }}).select('name').select('groupId').lean();
+        const result = groups.map(group => {
+            const message = messageMap.get(group.groupId.toString());
+            return {
+                groupId: group.groupId,
+                groupName: group.name,
+                lastMessage: message?.lastMessage || "[No messages yet]",
+                timeStamp: message?.timeStamp || group.updatedAt || group.createdAt,
+                unreadCount: message?.unreadCount || 0
+            };
+        });
 
-        const groupMap = new Map(groups.map(g => [ g.groupId.toString(), g]));
+        result.sort((a, b) => new Date(b.timeStamp) - new Date(a.timeStamp));
 
-        const chatWithGroupName = recentGroupChat.map(chat => ({ 
-            ...chat,
-            groupName: groupMap.get(chat._id.toString())?.name || "Unknown Group"
-        }))
-
-        if (!chatWithGroupName) {
-            return res.status(400).json({ success: false, error: "Can't get any datas.." });
-        }
-        return res.status(200).json({ success: true, data: chatWithGroupName });
+        return res.status(200).json({ success: true, data: result });
     } catch (error) {
         return res.status(500).json({ success: false, error: error.message });
     }

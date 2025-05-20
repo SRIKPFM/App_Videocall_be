@@ -8,17 +8,23 @@ export const getFolderByMimeType = (mimetype) => {
     return 'documents';
 };
 
-export const generateToken = async (data) => {
+export const generateToken = (data) => {
     const secretKey = process.env.SECRET_KEY_FOR_TOKEN;
-    const token = jwt.sign({ data }, secretKey);
+    const token = jwt.sign(data, secretKey);
     return token;
+}
+
+export const getUserIdFromToken = (token) => {
+    const secretKey = process.env.SECRET_KEY_FOR_TOKEN;
+    const getUserId = jwt.verify(token, secretKey);
+    return getUserId.userId;
 }
 
 export const isGroupExcist = async (groupId) => {
     const isGroupExcist = await groupSchema.findOne({ groupId: groupId });
     if (!isGroupExcist) {
         return res.status(404).json({ success: false, error: "Can't find Group..!!" });
-    } 
+    }
     return isGroupExcist;
 }
 

@@ -2,6 +2,7 @@ import express from 'express';
 import bcrypt from 'bcrypt';
 import { UserLoginCredentials } from '../models/loginModels.js';
 import { ContactDetails } from '../models/contactsModels.js';
+import { generateToken } from '../Helper/helper.js';
 
 const router = express.Router();
 
@@ -47,7 +48,11 @@ router.post('/api/userLoginOrLogout', async (req, res) => {
             if (isUser.password === password) {
                 isUser.isLoggedin = true;
                 await isUser.save();
-                return res.status(200).json({ success: true, message: "User loggedin successfully..", userId: isUser.userId });
+                const data = {
+                    userId: isUser.userId
+                }
+                const token = generateToken(data);
+                return res.status(200).json({ success: true, message: "User loggedin successfully..", userId: isUser.userId, token: token });
             }
             return res.status(404).json({ success: false, error: "Please enter the correct details." });    
         } else if ( type === "logout" ){

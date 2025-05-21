@@ -39,7 +39,7 @@ router.post('/api/createNewContact', async (req, res) => {
             };
             const addUserContact = isUserExcist.userContactDetails.push(userContactDetails);
             await isUserExcist.save()
-            .then(() => { return res.status(200).json({ success: true, message: "Contact added successfully.." })})
+            .then((data) => { return res.status(200).json({ success: true, message: "Contact added successfully..", data: data })})
             .catch((error) => { return res.status(400).json({ success: false, error: error.message })});
         }
     } catch (error) {

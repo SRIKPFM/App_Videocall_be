@@ -158,9 +158,10 @@ router.post('/api/deleteMessage', authendicate, async (req, res) => {
     }
 });
 
-router.get('/api/recentChats/:userId', authendicate, async (req, res) => {
+router.get('/api/recentChats', authendicate, async (req, res) => {
     try {
-        const userId = req.params.userId;
+        const token = req.header('Authorization');
+        const userId = await getUserIdFromToken(token);
 
         const recentChats = await MessageSchema.aggregate([
             {

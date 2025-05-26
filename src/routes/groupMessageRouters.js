@@ -2,7 +2,8 @@ import express from 'express';
 import { v4 as uuidv4 } from 'uuid';
 import { groupSchema } from '../models/groupMessageModels.js';
 import { groupMessageSchema } from '../models/groupMessageModels.js';
-import { isGroupExcist, isUserAdmin } from '../Helper/helper.js';
+import { getUserIdFromToken, isGroupExcist, isUserAdmin } from '../Helper/helper.js';
+import { authendicate } from '../middleware/middleware.js';
 
 const router = express.Router();
 
@@ -220,9 +221,10 @@ router.post('/api/deleteForEveryone', async (req, res) => {
     }
 });
 
-router.post('/api/recentGroupChat', async (req, res) => {
+router.post('/api/recentGroupChat', authendicate, async (req, res) => {
     try {
-        const { userId } = req.body;
+        const token = req.header('Authorization');
+        const userId = await getUserIdFromToken(token);
 
         const groups = await groupSchema.find({ members: userId }).lean();
 

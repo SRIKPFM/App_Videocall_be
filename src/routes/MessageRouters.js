@@ -6,6 +6,8 @@ import { bucket } from '../Helper/fcm.js';
 import { MessageSchema } from '../models/MessageModels.js';
 import { UserLoginCredentials } from '../models/loginModels.js';
 import { TodolistSchema } from '../models/todolistModels.js';
+import { authendicate } from '../middleware/middleware.js';
+import { getUserIdFromToken } from '../Helper/helper.js';
 
 const router = express.Router();
 
@@ -81,7 +83,7 @@ export function setupSocketEvents(io, onlineUsers) {
 
 };
 
-// router.post('/api/storeMessages', async (req, res) => {
+// router.post('/api/storeMessages', authendicate, async (req, res) => {
 //     try {
 //         const { senderId, receiverId, text, imageUrl, videoUrl, audioUrl, documentUrl } = req.body;
 //         const isUserExcist = await UserLoginCredentials.findOne({ userId: senderId });
@@ -108,9 +110,11 @@ export function setupSocketEvents(io, onlineUsers) {
 //     }
 // });
 
-router.post('/api/getMessages', async (req, res) => {
+router.post('/api/getMessages', authendicate, async (req, res) => {
     try {
-        const { userId, receiverId } = req.body;
+        const { receiverId } = req.body;
+        const token = req.header('Authorization');
+        const userId = await getUserIdFromToken(token);
         const getMessages = await MessageSchema.find({
             $or: [
                 { senderId: userId, receiverId },
@@ -127,7 +131,7 @@ router.post('/api/getMessages', async (req, res) => {
         return res.status(500).json({ success: false, error: error.message });
     }
 });
-router.post('/api/updateMessage', async (req, res) => {
+router.post('/api/updateMessage', authendicate, async (req, res) => {
     try {
         const { messageId } = req.body;
         const findMessage = await MessageSchema.findOne({ messageId: messageId });
@@ -143,7 +147,7 @@ router.post('/api/updateMessage', async (req, res) => {
     }
 });
 
-router.post('/api/deleteMessage', async (req, res) => {
+router.post('/api/deleteMessage', authendicate, async (req, res) => {
     try {
         const { messageId } = req.body;
         const deleteMessage = await MessageSchema.findOneAndDelete({ messageId: messageId })
@@ -154,7 +158,7 @@ router.post('/api/deleteMessage', async (req, res) => {
     }
 });
 
-router.get('/api/recentChats/:userId', async (req, res) => {
+router.get('/api/recentChats/:userId', authendicate, async (req, res) => {
     try {
         const userId = req.params.userId;
 
@@ -234,7 +238,7 @@ router.get('/api/recentChats/:userId', async (req, res) => {
     }
 });
 
-router.post('/api/uploadFiles', upload.single('file'), async (req, res) => {
+router.post('/api/uploadFiles', authendicate, upload.single('file'), async (req, res) => {
     try {
         if (!req.file) { return res.status(400).json({ success: false, error: "File not uploaded." }) }
         const file = req.file;
@@ -303,13 +307,5 @@ router.post('/api/unreadCount/:userId', async (req, res) => {
 //         return res.status(500).json({ success: fasle, error: error.message });
 //     }
 // });
-
-router.post('/api/createGroupChat', async (req, res) => {
-    try {
-        const { } = req.body;
-    } catch (error) {
-        return res.status(500).json({ success: false, error: error.message })
-    }
-});
 
 export default router;

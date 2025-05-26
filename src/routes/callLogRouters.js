@@ -3,15 +3,19 @@ import multer, { memoryStorage } from 'multer';
 import { v4 as uuidv4 } from 'uuid';
 import { CallLogDetails } from '../models/callLogModels.js';
 import { UserLoginCredentials } from '../models/loginModels.js';
+import { authendicate } from '../middleware/middleware.js';
+import { getUserIdFromToken } from '../Helper/helper.js';
 
 const storage = multer.memoryStorage();
 const upload = multer({ storage: storage });
 
 const router = express.Router();
 
-router.post('/api/saveCallLogs', async (req, res) => {
+router.post('/api/saveCallLogs', authendicate, async (req, res) => {
     try {
-        const { callerId, recevierId, callType, status, isCalling } = req.body;
+        const { recevierId, callType, status, isCalling } = req.body;
+        const token = req.header('Authorization');
+        const callerId = await getUserIdFromToken(token);
         const isCallerExcist = await UserLoginCredentials.findOne({ userId: callerId });
         const isReceiverExcist = await UserLoginCredentials.findOne({ userId: recevierId });
         if (!isCallerExcist || !isReceiverExcist) {
@@ -37,9 +41,9 @@ router.post('/api/saveCallLogs', async (req, res) => {
     }
 });
 
-router.post('/api/getCallLogs', async (req, res) => {
+router.post('/api/getCallLogs', authendicate, async (req, res) => {
     try {
-        const { type, userId } = req.body;
+        const { userId } = req.body;
         const getIncomingCalls = await CallLogDetails.find({
             $or: [
                 {callerId: userId},
@@ -53,7 +57,7 @@ router.post('/api/getCallLogs', async (req, res) => {
     }
 });
 
-router.post('/api/updateCallLogs', async (req, res) => {
+router.post('/api/updateCallLogs', authendicate, async (req, res) => {
     try {
         const { callId, status, startTime, endTime } = req.body;
         const findCallLog = await CallLogDetails.findOne({ callId: callId });

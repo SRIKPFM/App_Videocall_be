@@ -25,12 +25,9 @@ export const getUserDataFromToken = async (token) => {
     try {
         const decoded = jwt.decode(token, process.env.SECRET_KEY_FOR_TOKEN);
         const getUserDetails = await UserLoginCredentials.findOne({ userId: decoded.userId },{ __v: 0, createdAt: 0, updatedAt: 0 });
-        if (!getUserDetails) {
-            return ({ success: false, error: "Can't get user details." });
-        }
         return getUserDetails;
     } catch (error) {
-        return ({ success: false, error: error.message });
+        return { success: false, error: error.message };
     }
 };
 

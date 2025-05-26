@@ -72,7 +72,7 @@ router.post('/api/getUser', async (req, res) => {
     try {
         const token = req.header('Authorization');
         const userData = await getUserDataFromToken(token);
-        return res.status(200).json({ success: true, data: userData });
+        return res.status(200).json({ userData });
     } catch (error) {
         return res.status(500).json({ success: false, error: error.message });
     }
@@ -140,14 +140,16 @@ router.post('/api/unPinUser', async (req, res) => {
     }
 });
 
-router.post('/api/lockUserChat', async (req, res) => {
+router.post('/api/lockUserChat', authendicate, async (req, res) => {
     try {
-        const { userId, userIdForLock, userName, password, confirmPassword } = req.body;
-        const isUserExcist = await UserLoginCredentials.findOne({ userId: userId });
-        if (!isUserExcist) {
-            return res.status(404).json({ success: false, error: "User not found..!!" });
+        const { userIdForLock, userName, password } = req.body;
+        const token = req.header('Authorization');
+        const userData = await getUserDataFromToken(token);
+        // const isUserExcist = await UserLoginCredentials.findOne({ userId: userData.userId });
+        if (!userData) {
+            return res.status(404).json(userData);
         }
-        const userContactDetail = await ContactDetails.findOne({ userId: userId });
+        const userContactDetail = await ContactDetails.findOne({ userId: userData.userId });
         const isReceiverExcist = userContactDetail.userContactDetails.find((data) => data.idNumber === userIdForLock);
         if (!isReceiverExcist) {
             return res.status(404).json({ success: false, error: "Receiver not in the user's contact list..!!" });
@@ -172,10 +174,12 @@ router.post('/api/lockUserChat', async (req, res) => {
     }
 });
 
-router.post('/api/unlockUserChat', async (req, res) => {
+router.post('/api/unlockUserChat', authendicate, async (req, res) => {
     try {
-        const { userId, userIdForLock, password } = req.body;
-        const userDetails = await UserLoginCredentials.findOne({ userId: userId });
+        const { userIdForLock, password } = req.body;
+        const token = req.header('Authorization');
+        const userData = await getUserDataFromToken(token);
+        const userDetails = await UserLoginCredentials.findOne({ userId: userData.userId });
         const isUserChatLocked = userDetails.lockedUserChat.find((data) => data.userId === userIdForLock);
         if (!isUserChatLocked) {
             return res.status(400).json({ success: false, error: "This user chat hasn't locked yet..!!" })
@@ -190,10 +194,11 @@ router.post('/api/unlockUserChat', async (req, res) => {
     }
 });
 
-router.post('/api/getAllChatLockedUser', async (req, res) => {
+router.post('/api/getAllChatLockedUser', authendicate, async (req, res) => {
     try {
-        const { userId } = req.body;
-        const getAllChatLockedUser = await UserLoginCredentials.findOne({ userId: userId });
+        const token = req.header('Authorization');
+        const userData = await getUserDataFromToken(token);
+        const getAllChatLockedUser = await UserLoginCredentials.findOne({ userId: userData.userId });
         if (!getAllChatLockedUser) { return res.status(404).json({ success: true, error: "Usern't found.." }) }
         return res.status(200).json({ success: true, data: getAllChatLockedUser.lockedUserChat });
     } catch (error) {
@@ -201,10 +206,12 @@ router.post('/api/getAllChatLockedUser', async (req, res) => {
     }
 });
 
-router.post('/api/createOrChangeArchivePassword', async (req, res) => {
+router.post('/api/createOrChangeArchivePassword', authendicate, async (req, res) => {
     try {
-        const { userId, password, confirmPassword } = req.body;
-        const isUserExcist = await UserLoginCredentials.findOne({ userId: userId });
+        const { password, confirmPassword } = req.body;
+        const token = req.header('Authorization');
+        const userData = await getUserDataFromToken(token);
+        const isUserExcist = await UserLoginCredentials.findOne({ userId: userData.userId });
         if (!isUserExcist) { return res.status(404).json({ success: false, error: "User not found..!!" }) };
         const hashedPassword = await bcrypt.hash(password, 10);
         if (isUserExcist.passwordForArchive === null) {
@@ -213,7 +220,6 @@ router.post('/api/createOrChangeArchivePassword', async (req, res) => {
             }
         } else {
             const unHashPassword = await bcrypt.compare(password, isUserExcist.passwordForArchive)
-            console.log(unHashPassword)
             if (unHashPassword === true) {
                 return res.status(400).json({ success: false, error: "The new password can't same as old password..!!" });
             } else {
@@ -236,10 +242,12 @@ router.post('/api/addUserIntoArchive', async (req, res) => {
     }
 });
 
-router.post('/api/updateOnlineStatus', async (req, res) => {
+router.post('/api/updateOnlineStatus', authendicate, async (req, res) => {
     try {
         const { userId, status } = req.body;
-        const isUserExcist = await UserLoginCredentials.findOne({ userId: userId });
+        const token = req.header('Authorization');
+        const userData = await getUserDataFromToken(token);
+        const isUserExcist = await UserLoginCredentials.findOne({ userId: userData.userId });
         if (!isUserExcist) { return res.status(404).json({ success: false, error: "User not found..!!" }) };
         isUserExcist.status = status;
         await isUserExcist.save()

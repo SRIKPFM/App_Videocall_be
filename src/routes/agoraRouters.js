@@ -34,7 +34,7 @@ const generateAccessToken = (req, res) => {
     const currentTime = Math.floor(Date.now() / 1000);
     const privilegeExpireTime = currentTime + expireTime;
     const token = RtcTokenBuilder.buildTokenWithUid(process.env.APP_ID, process.env.APP_CERTIFICATE, channelName, uid, role, privilegeExpireTime)
-    return res.status(200).json({ success: true, token: token })
+    return res.status(200).json({ success: true, token: token });
 };
 
 router.post('/api/getRtcAccessToken', noCache, generateAccessToken);

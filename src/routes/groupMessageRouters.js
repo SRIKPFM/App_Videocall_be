@@ -109,12 +109,12 @@ router.post('/api/getGroupMessages', async (req, res) => {
     try {
         const { groupId } = req.body;
         const findGroup = await isGroupExcist(groupId);
-        const getGroupMessages = await groupMessageSchema.find({ groupId: groupId }, { _id: 0, __v: 0 })
-            .sort({ createdAt: -1 });
+        const getGroupMessages = await groupMessageSchema.find({ groupId: groupId }, { _id: 0, __v: 0, groupId: 0 })
+            .sort({ timeStamp: -1 });
         if (getGroupMessages.length === 0) {
             return res.status(404).json({ success: false, error: "There is no message found for this group.." });
         }
-        return res.status(200).json({ success: true, data: getGroupMessages });
+        return res.status(200).json({ success: true, groupId: groupId, data: getGroupMessages });
     } catch (error) {
         return res.status(500).json({ success: false, error: error.message });
     }

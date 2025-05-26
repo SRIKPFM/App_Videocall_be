@@ -1,11 +1,15 @@
 import express from 'express';
 import { ContactDetails } from '../models/contactsModels.js';
+import { getUserIdFromToken } from '../Helper/helper.js';
+import { authendicate } from '../middleware/middleware.js';
 
 const router = express.Router();
 
-router.post('/api/createNewContact', async (req, res) => {
+router.post('/api/createNewContact', authendicate, async (req, res) => {
     try {
-        const { userId, fName, lName, idNum, birthday, mobNum, saveTo, saveAnyways } = req.body;
+        const { fName, lName, idNum, birthday, mobNum, saveTo, saveAnyways } = req.body;
+        const token = req.header('Authorization');
+        const userId = await getUserIdFromToken(token);
         const isUserExcist = await ContactDetails.findOne({ userId: userId });
         if (!isUserExcist) {
             const newContact = {
@@ -47,9 +51,10 @@ router.post('/api/createNewContact', async (req, res) => {
     }
 });
 
-router.post('/api/getUserContacts', async ( req, res ) => {
+router.post('/api/getUserContacts', authendicate, async ( req, res ) => {
     try {
-        const { userId } = req.body;
+        const token =  req.header('Authorization');
+        const userId = await getUserIdFromToken(token);
         const getAllContacts = await ContactDetails.findOne({ userId: userId });
         if (getAllContacts) {
             return res.status(200).json({ success: true, data: getAllContacts.userContactDetails });
@@ -60,9 +65,11 @@ router.post('/api/getUserContacts', async ( req, res ) => {
     }
 });
 
-router.post('/api/getUserUniqueContact', async (req, res) => {
+router.post('/api/getUserUniqueContact', authendicate, async (req, res) => {
     try {
-        const { userId, idNum } = req.body;
+        const { idNum } = req.body;
+        const token = req.header('Authorization');
+        const userId = await getUserIdFromToken(token);
         const getUserContacts = await ContactDetails.findOne({ userId: userId });
         if (!getUserContacts && getUserContacts.userContactDetails.length === 0) {
             return res.status(404).json({ success: fasle, error: "Can't find user contact details." });
@@ -77,9 +84,11 @@ router.post('/api/getUserUniqueContact', async (req, res) => {
     }
 });
 
-router.post('/api/removeContact', async (req, res) => {
+router.post('/api/removeContact', authendicate, async (req, res) => {
     try {
-        const { userId, idNum, userName } =  req.body;
+        const { idNum, userName } =  req.body;
+        const token = req.header('Authorization');
+        const userId = await getUserIdFromToken(token);
         const getUserContact = await ContactDetails.findOne({ userId: userId });
         if (!getUserContact) { return res.status(404).json({ success: false, error: "This user don't have a contact..!!" })};
         const filterContact = getUserContact.userContactDetails.filter((data) => data.fullName !== userName || data.idNumber !== idNum );

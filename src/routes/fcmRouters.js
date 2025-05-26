@@ -2,12 +2,16 @@ import express from 'express';
 import admin from '../Helper/fcm.js';
 import { UserLoginCredentials } from '../models/loginModels.js';
 import { CallLogDetails } from '../models/callLogModels.js';
+import { authendicate } from '../middleware/middleware.js';
+import { getUserIdFromToken } from '../Helper/helper.js';
 
 const router = express.Router();
 
-router.post('/api/sentNotification', async (req, res) => {
+router.post('/api/sentNotification', authendicate, async (req, res) => {
     try {
-        const { userId, title, body } = req.body;
+        const { title, body } = req.body;
+        const token = req.header('Authorization');
+        const userId = await getUserIdFromToken(token);
         const findReceiverToken = await UserLoginCredentials.findOne({ userId: userId });
         if (!findReceiverToken) { return res.status(404).json({ success: false, error: "Recevier not found..!!" }) };
         const message = {
@@ -26,7 +30,9 @@ router.post('/api/sentNotification', async (req, res) => {
 
 router.post('/api/sentCallNotification', async (req, res) => {
     try {
-        const { callType, callId, type, channelName, userId, recevierUserId } = req.body;
+        const { callType, callId, type, channelName, recevierUserId } = req.body;
+        const token = req.header('Authorization');
+        const userId = await getUserIdFromToken(token);
         const isUserExcist = await UserLoginCredentials.findOne({ userId: userId });
         const isRecevierExcist = await UserLoginCredentials.findOne({ userId: recevierUserId });
         const isCallExcist = await CallLogDetails.findOne({ callId: callId });

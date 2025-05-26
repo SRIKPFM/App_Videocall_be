@@ -1,12 +1,16 @@
 import express from 'express';
 import { v4 as uuidv4 } from 'uuid';
 import { TodolistSchema } from '../models/todolistModels.js';
+import { authendicate } from '../middleware/middleware.js';
+import { getUserIdFromToken } from '../Helper/helper.js';
 
 const router = express.Router();
 
-router.post('/api/createTodolist', async (req, res) => {
+router.post('/api/createTodolist', authendicate, async (req, res) => {
     try {
-        const { userId, title, date, text, imageUrl, alarm, voiceUrl } = req.body;
+        const { title, date, text, imageUrl, alarm, voiceUrl } = req.body;
+        const token = req.header('Authorization');
+        const userId = await getUserIdFromToken(token);
         const today = new Date();
         today.setHours(0, 0, 0, 0);
         const selectedDate = new Date(date);
@@ -30,9 +34,10 @@ router.post('/api/createTodolist', async (req, res) => {
     }
 });
 
-router.post('/api/updateTdlStatus', async (req, res) => {
+router.post('/api/updateTdlStatus', authendicate, async (req, res) => {
     try {
-        const { userId } = req.body;
+        const token = req.header('Authorization');
+        const userId = await getUserIdFromToken(token);
         const getAllTodolist = await TodolistSchema.find({ userId: userId });
         if (getAllTodolist.length === 0) {
             return res.status(404).json({ success: false, error: "There is no data found for this user..!!" });
@@ -67,9 +72,10 @@ router.post('/api/updateTdlStatus', async (req, res) => {
     }
 });
 
-router.post('/api/getTodos', async (req, res) => {
+router.post('/api/getTodos', authendicate, async (req, res) => {
     try {
-        const { userId } = req.body;
+        const token = req.header('Authorization');
+        const userId = await getUserIdFromToken(token);
         const getTodos = await TodolistSchema.find({ userId: userId }, { __v: 0, _id: 0, createdAt: 0, updatedAt: 0 });
         if (getTodos.length === 0) {
             return res.status(404).json({ success: false, error: "There is no Todos for this user", data: [] })
@@ -80,9 +86,11 @@ router.post('/api/getTodos', async (req, res) => {
     }
 });
 
-router.post('/api/deleteTodos', async (req, res) => {
+router.post('/api/deleteTodos', authendicate, async (req, res) => {
     try {
-        const { userId, tdlId } = req.body;
+        const { tdlId } = req.body;
+        const token = req.header('Authorization');
+        const userId = await getUserIdFromToken(token);
         const deleteTodos = await TodolistSchema.findOneAndDelete({ userId: userId, tdlId: tdlId });
         if (!deleteTodos) {
             return res.status(400).json({ success: false, error: "Can't delete this Todo." });

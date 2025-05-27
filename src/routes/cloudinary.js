@@ -49,6 +49,22 @@ router.post('/api/upload', authendicate, upload.single('file'), async (req, res)
     }
 });
 
+router.post('/api/uploadStatus', authendicate, upload.single('file'), async (req, res) => {
+    try {
+        const token = req.header('Authorization');
+        const senderId = await getUserIdFromToken(token);
+        if (!req.file) {
+            return res.status(404).json({ success: false, error: "File required..!!" });
+        } else {
+            const filePath = req.file.path;
+            const mimetype = req.file.mimetype;
+            const folder = getFolderByMimeType(mimetype);
+        }
+    } catch (error) {
+        return res.status(500).json({ success: false, error: error.message });
+    }
+})
+
 router.post('/api/uploadPdf', authendicate, upload.single('pdf'), async (req, res) => {
   try {
     const { receiverId } = req.body;

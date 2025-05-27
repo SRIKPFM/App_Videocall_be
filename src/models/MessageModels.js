@@ -16,6 +16,7 @@ export const MessageSchema = mongoose.model(
                 audioUrl: String,
                 documentUrl: String,
                 location: String,
+                contact: { name: String, num: String },
                 timeStamp: { type: Date, default: Date.now }
             },
             isPined: Boolean,

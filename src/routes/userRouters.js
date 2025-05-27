@@ -72,7 +72,7 @@ router.post('/api/getUser', async (req, res) => {
     try {
         const token = req.header('Authorization');
         const userData = await getUserDataFromToken(token);
-        return res.status(200).json({ userData });
+        return res.status(200).json({ success: true, userData });
     } catch (error) {
         return res.status(500).json({ success: false, error: error.message });
     }

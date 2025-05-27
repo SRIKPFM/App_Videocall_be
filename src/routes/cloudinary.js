@@ -30,7 +30,7 @@ router.post('/api/upload', authendicate, upload.single('file'), async (req, res)
         console.log(originalNameWithExt);
 
         const result = await cloudinary.uploader.upload(filePath, {
-            resource_type: folder === "documents" ? 'raw' : (folder === "images" ? 'image' : (folder === "videos" ? 'video' : 'audio')),
+            resource_type: folder === "documents" ? 'raw' : (folder === "images" ? 'image' : 'video' ),
             folder: `${folder}/${senderId}-To-${receiverId}`,
             public_id: `${originalNameWithExt.name}${originalNameWithExt.ext}`
         });

@@ -8,6 +8,7 @@ import { UserLoginCredentials } from '../models/loginModels.js';
 import { TodolistSchema } from '../models/todolistModels.js';
 import { authendicate } from '../middleware/middleware.js';
 import { getUserIdFromToken } from '../Helper/helper.js';
+import { ContactDetails } from '../models/contactsModels.js';
 
 const router = express.Router();
 
@@ -32,7 +33,7 @@ export function setupSocketEvents(io, onlineUsers) {
         })
 
         socket.on("send_message", async (data) => {
-            const { senderId, receiverId, text, imageUrl, videoUrl, audioUrl, documentUrl } = data;
+            const { senderId, receiverId, text, imageUrl, videoUrl, audioUrl, documentUrl, contact } = data;
             const messageId = uuidv4();
             const newMessage = new MessageSchema({
                 messageId: messageId,
@@ -43,7 +44,8 @@ export function setupSocketEvents(io, onlineUsers) {
                     imageUrl: imageUrl ? imageUrl : null,
                     videoUrl: videoUrl ? videoUrl : null,
                     audioUrl: audioUrl ? audioUrl : null,
-                    documentUrl: documentUrl ? documentUrl : null
+                    documentUrl: documentUrl ? documentUrl : null,
+                    contact: contact ? contact : null
                 },
                 status: onlineUsers.has(receiverId) ? 'delivered' : 'sent'
             });
@@ -83,32 +85,35 @@ export function setupSocketEvents(io, onlineUsers) {
 
 };
 
-// router.post('/api/storeMessages', authendicate, async (req, res) => {
-//     try {
-//         const { senderId, receiverId, text, imageUrl, videoUrl, audioUrl, documentUrl } = req.body;
-//         const isUserExcist = await UserLoginCredentials.findOne({ userId: senderId });
-//         if (!isUserExcist) { return res.status(404).json({ success: fasle, error: "User not found..!!" })};
-//         if (!senderId || !receiverId) { return res.status(400).json({ success: false, error: "senderId or receiverId is required..!!" }) };
-//         const createMessage = {
-//             messageId: uuidv4(),
-//             senderId: senderId,
-//             receiverId: receiverId,
-//             content: {
-//                 text: text ? text : null,
-//                 imageUrl: imageUrl ? imageUrl : null,
-//                 videoUrl: videoUrl ? videoUrl : null,
-//                 audioUrl: audioUrl ? audioUrl : null,
-//                 documentUrl: documentUrl ? documentUrl : null
-//             },
-//             isPined: false
-//         };
-//         const storeMessages = await MessageSchema.create(createMessage)
-//             .then((data) => { return res.status(200).json({ success: true, message: "Message stored successfully..", data: data }) })
-//             .catch((error) => { return res.status(400).json({ success: false, error: error }) });
-//     } catch (error) {
-//         return res.status(500).json({ success: false, error: error.message });
-//     }
-// });
+router.post('/api/storeMessages', authendicate, async (req, res) => {
+    try {
+        const { receiverId, text, imageUrl, videoUrl, audioUrl, documentUrl, contact } = req.body;
+        const token = req.header('Authorization');
+        const senderId = await getUserIdFromToken(token);
+        const isUserExcist = await UserLoginCredentials.findOne({ userId: senderId });
+        if (!isUserExcist) { return res.status(404).json({ success: fasle, error: "User not found..!!" }) };
+        if (!senderId || !receiverId) { return res.status(400).json({ success: false, error: "senderId or receiverId is required..!!" }) };
+        const createMessage = {
+            messageId: uuidv4(),
+            senderId: senderId,
+            receiverId: receiverId,
+            content: {
+                text: text ? text : null,
+                imageUrl: imageUrl ? imageUrl : null,
+                videoUrl: videoUrl ? videoUrl : null,
+                audioUrl: audioUrl ? audioUrl : null,
+                documentUrl: documentUrl ? documentUrl : null,
+                contact: contact ? contact : null
+            },
+            isPined: false
+        };
+        const storeMessages = await MessageSchema.create(createMessage)
+            .then((data) => { return res.status(200).json({ success: true, message: "Message stored successfully..", data: data }) })
+            .catch((error) => { return res.status(400).json({ success: false, error: error }) });
+    } catch (error) {
+        return res.status(500).json({ success: false, error: error.message });
+    }
+});
 
 router.post('/api/getMessages', authendicate, async (req, res) => {
     try {

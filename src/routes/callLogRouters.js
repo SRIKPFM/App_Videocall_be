@@ -31,6 +31,7 @@ router.post('/api/saveCallLogs', authendicate, async (req, res) => {
             callInitiatedTime: Date.now(),
             startTime: "",
             endTime: "",
+            recoredUrl: null,
             duration: 0
         };
         const createCallLog = await CallLogDetails.create(callStructure)
@@ -60,7 +61,7 @@ router.post('/api/getCallLogs', authendicate, async (req, res) => {
 
 router.post('/api/updateCallLogs', authendicate, async (req, res) => {
     try {
-        const { callId, status, startTime, endTime } = req.body;
+        const { callId, status, startTime, endTime, recoredUrl } = req.body;
         const findCallLog = await CallLogDetails.findOne({ callId: callId });
         if (!findCallLog) {
             return res.status(404).json({ success: false, error: "Can't find call Log data." });
@@ -70,6 +71,7 @@ router.post('/api/updateCallLogs', authendicate, async (req, res) => {
         findCallLog.endTime = endTime || findCallLog.endTime;
         console.log((new Date(findCallLog.startTime) - new Date(findCallLog.endTime)));
         findCallLog.isCalling = status === "accepted" ? true : false;
+        findCallLog.recoredUrl = recoredUrl ? recoredUrl : findCallLog.recoredUrl;
 
         if (findCallLog.startTime && findCallLog.endTime) {
             findCallLog.duration = Math.floor((new Date(findCallLog.endTime) - new Date(findCallLog.startTime)) / 1000);

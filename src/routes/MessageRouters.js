@@ -33,7 +33,7 @@ export function setupSocketEvents(io, onlineUsers) {
         })
 
         socket.on("send_message", async (data) => {
-            const { senderId, receiverId, text, imageUrl, videoUrl, audioUrl, documentUrl, contact } = data;
+            const { senderId, receiverId, text, imageUrl, videoUrl, audioUrl, documentUrl, location, contact } = data;
             const messageId = uuidv4();
             const newMessage = new MessageSchema({
                 messageId: messageId,
@@ -45,6 +45,7 @@ export function setupSocketEvents(io, onlineUsers) {
                     videoUrl: videoUrl ? videoUrl : null,
                     audioUrl: audioUrl ? audioUrl : null,
                     documentUrl: documentUrl ? documentUrl : null,
+                    location: location ? location : null,
                     contact: contact ? contact : null
                 },
                 status: onlineUsers.has(receiverId) ? 'delivered' : 'sent'

@@ -15,6 +15,7 @@ export const CallLogDetails = mongoose.model(
             startTime: Date,
             endTime: Date,
             duration: Number,
+            recoredUrl: String,
             isCalling: Boolean
         }
     ),

@@ -43,7 +43,8 @@ router.post('/api/saveCallLogs', authendicate, async (req, res) => {
 
 router.post('/api/getCallLogs', authendicate, async (req, res) => {
     try {
-        const { userId } = req.body;
+        const token = req.header('Authorization');
+        const userId = await getUserIdFromToken(token);
         const getIncomingCalls = await CallLogDetails.find({
             $or: [
                 {callerId: userId},

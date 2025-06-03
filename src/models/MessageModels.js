@@ -20,8 +20,8 @@ export const MessageSchema = mongoose.model(
                 timeStamp: { type: Date, default: Date.now }
             },
             isPined: Boolean,
-            deletedFor: [{ type: String }],
-            isDeletedForEveryone: { type: Boolean, default: false },
+            deleteFor: [{ type: String }],
+            isDeleteForEveryone: { type: Boolean, default: false },
             isMessageDelivered: { type: String, enum: [ 'sent', 'delivered', 'read' ], default: 'sent'},
             isMessageReaded: { type: Boolean, default: false}
         }

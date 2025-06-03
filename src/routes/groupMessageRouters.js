@@ -107,11 +107,13 @@ router.post('/api/storeGroupMessages', async (req, res) => {
     }
 });
 
-router.post('/api/getGroupMessages', async (req, res) => {
+router.post('/api/getGroupMessages', authendicate, async (req, res) => {
     try {
         const { groupId } = req.body;
+        const token = req.header('Authorization');
+        const userId = await getUserIdFromToken(token);
         const findGroup = await isGroupExcist(groupId);
-        const getGroupMessages = await groupMessageSchema.find({ groupId: groupId }, { _id: 0, __v: 0, groupId: 0 })
+        const getGroupMessages = await groupMessageSchema.find({ groupId: groupId, isDeleteForEveryone: { $ne: true }, deleteFor: { $ne: userId } }, { _id: 0, __v: 0, groupId: 0 })
             .sort({ timeStamp: -1 });
         if (getGroupMessages.length === 0) {
             return res.status(404).json({ success: false, error: "There is no message found for this group.." });
@@ -189,7 +191,7 @@ router.post('/api/updateAdminOnly', async (req, res) => {
     }
 });
 
-router.post('/api/chat/delete-for-me', authendicate, async (req, res) => {
+router.post('/api/group/delete-for-me', authendicate, async (req, res) => {
     try {
         const { groupId, messageId } = req.body;
         const token = req.header('Authorization');
@@ -206,7 +208,7 @@ router.post('/api/chat/delete-for-me', authendicate, async (req, res) => {
     }
 });
 
-router.post('/api/chat/deleteForEveryone', authendicate, async (req, res) => {
+router.post('/api/group/deleteForEveryone', authendicate, async (req, res) => {
     try {
         const { groupId, messageId } = req.body;
         const token = req.header('Authorization');

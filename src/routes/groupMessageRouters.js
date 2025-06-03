@@ -5,7 +5,7 @@ import { groupMessageSchema } from '../models/groupMessageModels.js';
 import { getUserIdFromToken, isGroupExcist, isUserAdmin } from '../Helper/helper.js';
 import { authendicate } from '../middleware/middleware.js';
 
-const router = express.Router();
+export const router = express.Router();
 
 export function setupGroupChat(io, onlineUsers) {
     io.on('connection', (socket) => {
@@ -15,7 +15,7 @@ export function setupGroupChat(io, onlineUsers) {
         });
 
         socket.on('sent_group_message', async (data) => {
-            const { groupId, senderId, text, imageUrl, videoUrl, audioUrl, documentUrl, location } = data;
+            const { groupId, senderId, text, imageUrl, videoUrl, audioUrl, documentUrl, location, contact } = data;
 
             const adminDetials = await groupSchema.findOne({ groupId: groupId });
             if (adminDetials.isAdminOnly === true) {
@@ -31,7 +31,8 @@ export function setupGroupChat(io, onlineUsers) {
                         videoUrl: videoUrl,
                         audioUrl: audioUrl,
                         documentUrl: documentUrl,
-                        location: location
+                        location: location,
+                        contact: contact ? contact : null
                     }
                 });
 
@@ -188,12 +189,14 @@ router.post('/api/updateAdminOnly', async (req, res) => {
     }
 });
 
-router.post('/api/delete-for-me', async (req, res) => {
+router.post('/api/chat/delete-for-me', authendicate, async (req, res) => {
     try {
-        const { groupId, userId, messageId } = req.body;
+        const { groupId, messageId } = req.body;
+        const token = req.header('Authorization');
+        const userId = await getUserIdFromToken(token);
         const findGroup = await isGroupExcist(groupId);
 
-        const deleteMessage = await groupMessageSchema.updateOne({ messageId: messageId }, { $addToSet: { deleteForMe: userId } });
+        const deleteMessage = await groupMessageSchema.updateOne({ messageId: messageId }, { $addToSet: { deleteFor: userId } });
         if (!deleteMessage) {
             return res.status(400).json({ success: false, error: "Error occurred while deleting message" });
         }
@@ -203,9 +206,11 @@ router.post('/api/delete-for-me', async (req, res) => {
     }
 });
 
-router.post('/api/deleteForEveryone', async (req, res) => {
+router.post('/api/chat/deleteForEveryone', authendicate, async (req, res) => {
     try {
-        const { groupId, userId, messageId } = req.body;
+        const { groupId, messageId } = req.body;
+        const token = req.header('Authorization');
+        const userId = await getUserIdFromToken(token);
         const findGroup = await isGroupExcist(groupId);
         const findMessage = await groupMessageSchema.findOne({ messageId: messageId, groupId: groupId });
         if (!findMessage) { return res.status(404).json({ success: false, error: "Can't find message..!!" }) }

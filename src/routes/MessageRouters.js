@@ -296,6 +296,43 @@ router.post('/api/unreadCount/:userId', async (req, res) => {
     }
 });
 
+// router.post('/api/delete-for-me', authendicate, async (req, res) => {
+//     try {
+//         const { messageId } = req.body;
+//         const token = req.header('Authorization');
+//         const userId = await getUserIdFromToken(token);
+
+//         const deleteMessage = await MessageSchema.updateOne({ messageId: messageId }, { $addToSet : { deleteFor : userId } });
+//         console.log(deleteMessage)
+//         if (!deleteMessage) {
+//             return res.status(400).json({ success: false, error: "Error occurred while deleting message" });
+//         }
+//         return res.status(200).json({ success: true, message: "Message deleted successfully..!!" });
+//     } catch (error) {
+//         return res.status(500).json({ success: false, error: error.message })
+//     }
+// });
+
+// router.post('/api/deleteForEveryone', authendicate, async (req, res) => {
+//     try {
+//         const { messageId } = req.body;
+//         const token = req.header('Authorization');
+//         const userId = await getUserIdFromToken(token);
+        
+//         const findMessage = await MessageSchema.findOne({ messageId: messageId });
+//         if (!findMessage) { return res.status(404).json({ success: false, error: "Can't find message..!!" }) }
+//         if (findMessage.senderId !== userId) { return res.status(400).json({ success: false, error: "You're not authorized to delete this message..!!" }) }
+
+//         const deleteMessage = await groupMessageSchema.updateOne({ messageId: messageId }, { isDeleteForEveryone: true });
+//         if (!deleteMessage) {
+//             return res.status(400).json({ success: false, error: "Error occurred while deleting message" });
+//         }
+//         return res.status(200).json({ success: true, message: "Message deleted successfully..!!" });
+//     } catch (error) {
+//         return res.status(500).json({ success: false, error: error.message });
+//     }
+// });
+
 // router.post('/api/updateMessageDeveliryStatus', async (req, res) => {
 //     try {
 //         const { userId, messageId } = req.body;

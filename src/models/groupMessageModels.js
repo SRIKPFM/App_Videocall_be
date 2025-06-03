@@ -32,7 +32,8 @@ export const groupMessageSchema = mongoose.model(
                 videoUrl: { type: String, default: null },
                 audioUrl: { type: String, default: null },
                 documentUrl: { type: String, default: null },
-                location: { type: String, default: null }
+                location: { type: String, default: null },
+                contact: { name: String, num: String }
             },
             deleteFor: [{ type: String }],
             isDeleteForEveryone: { type: Boolean, default: false },

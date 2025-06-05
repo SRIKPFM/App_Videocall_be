@@ -24,18 +24,13 @@ router.post('/api/upload', authendicate, upload.single('file'), async (req, res)
         const filePath = req.file.path;
         const mimetype = req.file.mimetype;
         const folder = getFolderByMimeType(mimetype);
-        console.log(folder)
 
         const originalNameWithExt = path.parse(req.file.originalname);
-        console.log(originalNameWithExt);
-
         const result = await cloudinary.uploader.upload(filePath, {
             resource_type: folder === "documents" ? 'raw' : (folder === "images" ? 'image' : 'video' ),
             folder: `${folder}/${senderId}-To-${receiverId}`,
             public_id: `${originalNameWithExt.name}${originalNameWithExt.ext}`
         });
-        console.log(result);
-
         fs.unlinkSync(filePath);
 
         return res.status(200).json({
@@ -116,10 +111,9 @@ router.post('/api/uploadTodolistFiles', authendicate, upload.single('file'), asy
         const folder = getFolderByMimeType(mimetype);
 
         const result = await cloudinary.uploader.upload(filePath, {
-            resource_type: folder === "documents" ? 'raw' : (folder === "images" ? 'image' : (folder === "videos" ? 'video' : 'audio')),
+            resource_type: folder === "documents" ? 'raw' : (folder === "images" ? 'image' : 'video'),
             folder: `Todolist/${userId}`
         });
-        console.log(result);
 
         fs.unlinkSync(filePath);
 
@@ -150,7 +144,7 @@ router.post('/api/uploadRecoredFiles', authendicate, upload.single('file'), asyn
         const originalNameWithExt = path.parse(req.file.originalname);
 
         const result = await cloudinary.uploader.upload(filePath, {
-            resource_type: folder === "videos" ? 'video' : 'audio',
+            resource_type: 'video',
             folder: folder === "videos" ? `RecordedFile/Videofile/${senderId}-To-${receiverId}` : `RecordedFile/Audiofile/${senderId}-To-${receiverId}`,
             public_id: `${originalNameWithExt.name}${originalNameWithExt.ext}`
         });

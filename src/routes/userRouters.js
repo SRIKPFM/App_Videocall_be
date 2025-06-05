@@ -107,7 +107,6 @@ router.post('/api/pinUser', async (req, res) => {
             const findUserContact = await ContactDetails.findOne({ userId: userData.userId });
             if (!findUserContact) { return res.status(404).json({ success: false, error: "There is no contacts for this user..!!" }) }
             const getSpecificUser = findUserContact.userContactDetails.find((data) => data.fullName === userName)
-            console.log(findUserContact);
             if (!getSpecificUser) { return res.status(404).json({ success: false, error: "There is no User in your contact..!!" }) }
             const pinUser = {
                 userName: getSpecificUser.fullName,

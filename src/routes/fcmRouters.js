@@ -28,7 +28,7 @@ router.post('/api/sentNotification', authendicate, async (req, res) => {
     }
 });
 
-router.post('/api/sentCallNotification', async (req, res) => {
+router.post('/api/sentCallNotification', authendicate, async (req, res) => {
     try {
         const { callType, callId, type, channelName, recevierUserId } = req.body;
         const token = req.header('Authorization');
@@ -36,11 +36,12 @@ router.post('/api/sentCallNotification', async (req, res) => {
         const isUserExcist = await UserLoginCredentials.findOne({ userId: userId });
         const isRecevierExcist = await UserLoginCredentials.findOne({ userId: recevierUserId });
         const isCallExcist = await CallLogDetails.findOne({ callId: callId });
-        console.log(isRecevierExcist)
         if (!isUserExcist || !isRecevierExcist || !isCallExcist) {
             return res.status(404).json({ success: false, error: !isUserExcist ? "User not found..!!" : ( !isRecevierExcist ? "Receiver not found..!!" : "Call log details not found..!!" )});
         } else if (isUserExcist.isLoggedin === false || isRecevierExcist.isLoggedin === false) {
             return res.status(404).json({ success: false, error: "Your're not loggedin. Please Login first..!!" });
+        }else if (!isRecevierExcist.fcmToken) {
+            return res.status(404).json({ success: false, error: "Receiver doesn't have a fcm token." });
         } else {
             const payload = {
                 token: isRecevierExcist.fcmToken,
@@ -48,16 +49,16 @@ router.post('/api/sentCallNotification', async (req, res) => {
                     title: type,
                     body: type === "Incoming call" ? `You have a call from ${isUserExcist.userName}` : `You have a missed call from ${isUserExcist.userName}`,
                     sound: "default",
-                    type: type,
-                    channelName: channelName,
-                    userId: userId,
-                    recevierUserId: recevierUserId,
+                    type: String(type),
+                    channelName: String(channelName),
+                    userId: String(userId),
+                    recevierUserId: String(recevierUserId),
                     isCallee: 'true',
-                    callType: callType
-                },
-                android: {
-                    priority: 'high'
+                    callType: String(callType)
                 }
+                // android: {
+                //     priority: 'high'
+                // }
             };
 
             await admin.messaging().send(payload)

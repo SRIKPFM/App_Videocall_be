@@ -310,9 +310,13 @@ router.post('/api/recentGroupChat', authendicate, async (req, res) => {
             return {
                 groupId: group.groupId,
                 groupName: group.name,
+                admin: group.adminId,
+                members: group.members,
+                createrId: group.createrId,
                 lastMessage: message?.lastMessage || "[No messages yet]",
                 timeStamp: message?.timeStamp || group.updatedAt || group.createdAt,
-                unreadCount: message?.unreadCount || 0
+                unreadCount: message?.unreadCount || 0,
+                isAdminOnly: group.isAdminOnly
             };
         });
 

@@ -69,7 +69,6 @@ router.post('/api/updateCallLogs', authendicate, async (req, res) => {
         findCallLog.status = status || findCallLog.status;
         findCallLog.startTime = startTime || findCallLog.startTime;
         findCallLog.endTime = endTime || findCallLog.endTime;
-        console.log((new Date(findCallLog.startTime) - new Date(findCallLog.endTime)));
         findCallLog.isCalling = status === "accepted" ? true : false;
         findCallLog.recoredUrl = recoredUrl ? recoredUrl : findCallLog.recoredUrl;
 

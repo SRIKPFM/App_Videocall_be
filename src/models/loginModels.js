@@ -25,6 +25,7 @@ export const UserLoginCredentials = mongoose.model(
                 userName: String,
                 userId: String
             }],
+            favoritedUser: Array,
             passwordForArchive: String,
             status: Boolean
         },

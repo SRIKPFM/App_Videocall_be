@@ -2,7 +2,7 @@ import express from 'express';
 import bcrypt from 'bcrypt';
 import { UserLoginCredentials } from '../models/loginModels.js';
 import { ContactDetails } from '../models/contactsModels.js';
-import { generateToken, getUserDataFromToken } from '../Helper/helper.js';
+import { generateToken, getUserDataFromToken, getUserIdFromToken } from '../Helper/helper.js';
 import { authendicate } from '../middleware/middleware.js';
 
 const router = express.Router();
@@ -97,7 +97,7 @@ router.post('/api/pinUser', async (req, res) => {
         const { userName } = req.body;
         const token = req.header('Authorization');
         if (!token) {
-            return res.status(400).json({ success: false, error: "Token is missing...."})
+            return res.status(400).json({ success: false, error: "Token is missing...." })
         }
         const userData = await getUserDataFromToken(token);
         const isUserExcist = await UserLoginCredentials.findOne({ userId: userData.userId });
@@ -252,6 +252,64 @@ router.post('/api/updateOnlineStatus', authendicate, async (req, res) => {
         await isUserExcist.save()
             .then(() => { return res.status(200).json({ success: true, message: "User status updated successfully..!!" }) })
             .catch((error) => { return res.status(400).json({ success: false, error: error.message }) });
+    } catch (error) {
+        return res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+router.post('/api/addFavoriteUser', authendicate, async (req, res) => {
+    try {
+        const { favoriteUserId } = req.body;
+        const token = req.header('Authorization');
+        const userId = await getUserIdFromToken(token);
+
+        const isUserExcist = await UserLoginCredentials.findOne({ userId: userId });
+        if (!isUserExcist) {
+            return res.status(404).json({ success: false, error: "User not found..!!" });
+        }
+        if (isUserExcist.favoritedUser.length !== 0) {
+            isUserExcist.favoritedUser = [...isUserExcist.favoritedUser, ...favoriteUserId]
+        } else {
+            isUserExcist.favoritedUser = favoriteUserId;
+        }
+        await isUserExcist.save()
+            .then(() => { return res.status(200).json({ success: true, message: "Favorite user added successfully.." }) })
+            .catch((error) => { return res.status(400).json({ success: false, error: error.message }) });
+    } catch (error) {
+        return res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+router.post('/api/removeFavoriteUser', authendicate, async (req, res) => {
+    try {
+        const { removeUserId } = req.body;
+        const token = req.header('Authorization');
+        const userId = await getUserIdFromToken(token);
+
+        const isUserExcist = await UserLoginCredentials.findOne({ userId: userId });
+        if (!isUserExcist) {
+            return res.status(404).json({ success: false, error: "User not found..!!" });
+        }
+        const result = await UserLoginCredentials.updateOne({ userId: userId }, { $pull: { favoritedUser: { $in: removeUserId } } });
+        if (result.modifiedCount === 0) {
+            return res.status(400).json({ success: false, error: "Can't remove favorite user.." });
+        }
+        return res.status(200).json({ success: true, message: "Favorite user removed successfully.." })
+    } catch (error) {
+        return res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+router.post('/api/getFavoriteUsers', authendicate, async (req, res) => {
+    try {
+        const token = req.header('Authorization');
+        const userId = await getUserIdFromToken(token);
+
+        const isUserExcist = await UserLoginCredentials.findOne({ userId: userId });
+        if (!isUserExcist) {
+            return res.status(404).json({ success: false, error: "User not found..!!" });
+        }
+        return res.status(200).json({ success: true , favoriteUserId: isUserExcist.favoritedUser });
     } catch (error) {
         return res.status(500).json({ success: false, error: error.message });
     }

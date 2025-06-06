@@ -12,6 +12,8 @@ export const groupSchema = mongoose.model(
             createrId: String,
             adminId: [String],
             members: [String],
+            groupDescription: String,
+            groupProfilePicUrl: { type: String, defaut: null },
             isAdminOnly: { type: Boolean, default: false },
             createdAt: { type: Date, default: Date.now }
         }

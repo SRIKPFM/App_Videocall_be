@@ -10,8 +10,10 @@ export const UserLoginCredentials = mongoose.model(
             userName: String,
             email: String,
             password: String,
+            profilePicUrl: String,
             fcmToken: String,
             isLoggedin: Boolean,
+            Description: String,
             pinedUsers: [{
                 userName: String,
                 userId: String

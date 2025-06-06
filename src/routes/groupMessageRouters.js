@@ -70,7 +70,8 @@ router.post('/api/createGroup', async (req, res) => {
             name: name,
             createrId: createrId,
             adminId: [createrId],
-            members: members
+            members: members,
+            groupProfilePicUrl: null
         });
 
         await groupStructure.save()
@@ -312,6 +313,7 @@ router.post('/api/recentGroupChat', authendicate, async (req, res) => {
                 groupName: group.name,
                 admin: group.adminId,
                 members: group.members,
+                profilePic: group.groupProfilePicUrl,
                 createrId: group.createrId,
                 lastMessage: message?.lastMessage || "[No messages yet]",
                 timeStamp: message?.timeStamp || group.updatedAt || group.createdAt,

@@ -153,6 +153,14 @@ router.post('/api/updateMessage', authendicate, async (req, res) => {
     }
 });
 
+router.post('/api/pinMessages', authendicate, async (req, res) => {
+    try {
+
+    } catch (error) {
+        return res.status(500).json({ success: false, error: error.message });
+    }
+});
+
 router.post('/api/deleteMessage', authendicate, async (req, res) => {
     try {
         const { messageId } = req.body;

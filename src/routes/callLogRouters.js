@@ -5,6 +5,7 @@ import { CallLogDetails } from '../models/callLogModels.js';
 import { UserLoginCredentials } from '../models/loginModels.js';
 import { authendicate } from '../middleware/middleware.js';
 import { getUserIdFromToken } from '../Helper/helper.js';
+import { groupCallLogSchema } from '../models/groupModels.js';
 
 const storage = multer.memoryStorage();
 const upload = multer({ storage: storage });
@@ -85,12 +86,134 @@ router.post('/api/updateCallLogs', authendicate, async (req, res) => {
     }
 });
 
-router.post('/uploadAndSaveCallRecording', upload.single('file'), async (req, res) => {
+router.post('/api/createGroupCallLogs', authendicate, async (req, res) => {
     try {
-
+        const { groupId, callType, status } = req.body;
+        const token = req.header('Authorization');
+        const userId = await getUserIdFromToken(token);
+        const callLogStructure = new groupCallLogSchema({
+            callId: uuidv4(),
+            groupId: groupId,
+            initiatedBy: userId,
+            callType: callType,
+            status: "initiated",
+            callInitiatedTime: Date.now(),
+            startTime: Date.now(),
+            endTime: null,
+            duration: 0,
+            recordedUrl: null,
+            isCalling: true
+        })
+        await callLogStructure.save()
+        .then(() => { return res.status(200).json({ success: true, message: "Group call logs created..!!" })})
+        .catch((error) => { return res.status(400).json({ success: false, error: error.message })})
     } catch (error) {
         return res.status(500).json({ success: false, error: error.message });
     }
 });
+
+router.post('/api/groupCallLogs/updateStatus', authendicate, async (req, res) => {
+    try {
+        const { isCalling, callId } = req.body;
+        const token = req.header('Authorization');
+        const userId = await getUserIdFromToken(token);
+
+        const ifCallExcist = await groupCallLogSchema.findOne({ callId: callId });
+        if (!ifCallExcist) {
+            return res.status(404).json({ success: false, error: "Can't find call logs." });
+        }
+        if (isCalling === false) {
+            ifCallExcist.isCalling = isCalling;
+            ifCallExcist.endTime = Date.now();
+            if (ifCallExcist.startTime) {
+                ifCallExcist.duration = Math.floor((ifCallExcist.endTime - ifCallExcist.startTime) / 1000);
+            }
+        }
+        ifCallExcist.save()
+        .then(() => { return res.status(200).json({ success: true, message: "Group call status updated..!!" }) })
+    } catch (error) {
+        return res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+router.post('/api/groupCallLogs/deleteGroupCallLogs', authendicate, async (req, res) => {
+    try {
+        const { callId } = req.body;
+        const deleteGroupCallLogs = await groupCallLogSchema.findOneAndDelete({ callId: callId });
+        if (!deleteGroupCallLogs) {
+            return res.status(400).json({ success: false, error: "Can't delete group calllogs..!!" });
+        }
+        return res.status(200).json({ success: true, message: "Group calllogs successfully deleted..!!" });
+    } catch (error) {
+        return res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+router.post('/api/groupCallLogs/addParticipants', authendicate, async (req, res) => {
+    try {
+        const { callId } = req.body;
+        const token = req.header('Authorization');
+        const userId = await getUserIdFromToken(token);
+        console.log(userId)
+        const log = await groupCallLogSchema.findOne({ callId: callId });
+        console.log(log)
+        if (!log) {
+            return res.status(404).json({ success: false, error: "Can't find calllog details" });
+        }
+        let participants = log.participants.find(p => p.userId === userId);
+        console.log(participants)
+        if (!participants) {
+            log.participants.push({ userId: userId, joinedAt: new Date() });
+        } else {
+            participants.joinedAt = new Date();
+        }
+
+        if (!log.startTime) {
+            log.startTime = new Date();
+            log.isCalling = true;
+        }
+        log.status = "onGoing"
+        await log.save()
+        .then(() => { return res.status(200).json({ success: true, message: "Participants join time set.", data: log })})
+        .catch((error) => { return res.status(400).json({ success: false, error: error.message })});
+    } catch (error) {
+        return res.status(500).json({ success: false, error: error.message })
+    }
+});
+
+router.post('/api/groupCallLogs/updateLeavingParticipants', authendicate, async (req, res) => {
+    try {
+        const { callId } = req.body;
+        const token = req.header('Authorization');
+        const userId = await getUserIdFromToken(token);
+
+        const log = await groupCallLogSchema.findOne({ callId: callId });
+        if(!log) {
+            return res.status(404).json({ success: false, error: "Can't find callLog details." });
+        }
+        const participants = log.participants.find(p => p.userId === userId);
+        if (!participants) {
+            return res.status(404).json({ success: false, error: "Participant not found.!" });
+        }
+        participants.disconnectedAt = new Date();
+        if (participants.joinedAt) {
+            participants.duration = Math.floor((participants.disconnectedAt - participants.joinedAt) / 1000);
+        }
+
+        const allLeft = log.participants.every(p => p.disconnectedAt);
+        if (allLeft) {
+            log.isCalling = false;
+            log.endTime = new Date(),
+            log.duration = Math.floor((log.endTime - log.startTime) / 1000);
+            log.status = "completed"
+        }
+
+        await log.save()
+        .then(() => { return res.status(200).json({ success: true, message: "Participant details updated successfully..!!" })})
+        .catch((error) => { return res.status(400).json({ success: false, error: error.message })});
+    } catch (error) {
+        return res.status(500).json({ success: false, error: error.message });
+    }
+})
 
 export default router;

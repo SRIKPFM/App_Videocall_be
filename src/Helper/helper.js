@@ -1,5 +1,5 @@
-import { groupSchema } from "../models/groupMessageModels.js";
-import jwt, { decode } from 'jsonwebtoken';
+import { groupSchema } from "../models/groupModels.js";
+import jwt from 'jsonwebtoken';
 import { UserLoginCredentials } from "../models/loginModels.js";
 
 export const getFolderByMimeType = (mimetype) => {

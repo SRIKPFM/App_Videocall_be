@@ -5,7 +5,7 @@ import path from 'path';
 import { v2 as cloudinary } from "cloudinary";
 import { getFolderByMimeType, getUserIdFromToken } from '../Helper/helper.js';
 import { authendicate } from '../middleware/middleware.js';
-import { groupSchema } from '../models/groupMessageModels.js';
+import { groupSchema } from '../models/groupModels.js';
 import { UserLoginCredentials } from '../models/loginModels.js';
 
 const router = express.Router();

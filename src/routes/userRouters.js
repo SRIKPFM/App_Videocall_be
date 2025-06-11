@@ -236,31 +236,31 @@ router.post('/api/lockUserChat', authendicate, async (req, res) => {
     try {
         const { userIdForLock, userName, password } = req.body;
         const token = req.header('Authorization');
-        const userData = await getUserDataFromToken(token);
-        // const isUserExcist = await UserLoginCredentials.findOne({ userId: userData.userId });
-        if (!userData) {
-            return res.status(404).json(userData);
+        const userId = await getUserIdFromToken(token);
+        const isUserExcist = await UserLoginCredentials.findOne({ userId: userId });
+        if (!isUserExcist) {
+            return res.status(404).json({ success: false, error: "Can't find user details..!!" });
         }
-        const userContactDetail = await ContactDetails.findOne({ userId: userData.userId });
+        const userContactDetail = await ContactDetails.findOne({ userId: isUserExcist.userId });
         const isReceiverExcist = userContactDetail.userContactDetails.find((data) => data.idNumber === userIdForLock);
         if (!isReceiverExcist) {
             return res.status(404).json({ success: false, error: "Receiver not in the user's contact list..!!" });
         }
         const isUserChatLocked = isUserExcist.lockedUserChat.find((data) => data.userId === userIdForLock);
         if (isUserChatLocked) { return res.status(400).json({ success: false, error: "Already you have locked this user chat..!!" }) }
-        if (password.toString().split('').length === 4) {
-            const hashPassword = await bcrypt.hash(password.toString(), 10);
-            const newLockEntry = {
-                userName: userName,
-                userId: userIdForLock,
-                password: hashPassword
-            }
-            const addUserToChatLock = isUserExcist.lockedUserChat.push(newLockEntry);
-            isUserExcist.save()
-                .then(() => { return res.status(200).json({ success: true, message: "User Chat Locked successfully..!!" }) })
-                .catch((error) => { return res.status(400).json({ success: false, error: error.message }) })
+        if (password.toString().split('').length !== 4) {
+            return res.status(400).json({ success: false, error: "The password must be a 4-digit number." });
         }
-        return res.status(400).json({ success: false, error: "The password must be a 4-digit number." })
+        const hashPassword = await bcrypt.hash(password.toString(), 10);
+        const newLockEntry = {
+            userName: userName,
+            userId: userIdForLock,
+            password: hashPassword
+        }
+        const addUserToChatLock = isUserExcist.lockedUserChat.push(newLockEntry);
+        isUserExcist.save()
+            .then(() => { return res.status(200).json({ success: true, message: "User Chat Locked successfully..!!" }) })
+            .catch((error) => { return res.status(400).json({ success: false, error: error.message }) })
     } catch (error) {
         return res.status(500).json({ success: true, error: error.message });
     }

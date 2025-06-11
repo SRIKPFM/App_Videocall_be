@@ -45,3 +45,51 @@ export const groupMessageSchema = mongoose.model(
     ),
     "GroupMessageSchema"
 );
+
+export const ParticipantsSchema = mongoose.model(
+    "ParticipantsSchema",
+    new Schema(
+        {
+            groupId: String,
+            userId: String,
+            joinedAt: Date,
+            disconnectedAt: Date,
+            duration: Number
+        },
+        {
+            timestamps: true
+        }
+    ),
+    "ParticipantsSchema"
+);
+
+export const groupCallLogSchema = mongoose.model(
+    "groupCallLogSchema",
+    new Schema(
+        {
+            callId: { type: String, required: true },
+            groupId: { type: String, required: true },
+            initiatedBy: { type: String, required: true },
+            callType: { type: String, enum: ["voice", "video"], required: true },
+            status: { type: String, enum: ["initiated", "onGoing", "completed", "rejected"], required: true },
+            callInitiatedTime: { type: Date, default: Date.now },
+            startTime: { type: Date, default: null },
+            endTime: { type: Date, default: null },
+            duration: Number,
+            recordedUrl: String,
+            participants: [
+                {
+                    userId: String,
+                    joinedAt: Date,
+                    disconnectedAt: Date,
+                    duration: Number
+                }
+            ],
+            isCalling: Boolean
+        },
+        {
+            timestamps: true
+        }
+    ),
+    "groupCallLogSchema"
+);

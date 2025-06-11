@@ -1,7 +1,7 @@
 import express from 'express';
 import { v4 as uuidv4 } from 'uuid';
-import { groupSchema } from '../models/groupMessageModels.js';
-import { groupMessageSchema } from '../models/groupMessageModels.js';
+import { groupSchema } from '../models/groupModels.js';
+import { groupMessageSchema } from '../models/groupModels.js';
 import { getUserIdFromToken, isGroupExcist, isUserAdmin } from '../Helper/helper.js';
 import { authendicate } from '../middleware/middleware.js';
 

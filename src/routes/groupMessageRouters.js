@@ -4,6 +4,7 @@ import { groupSchema } from '../models/groupModels.js';
 import { groupMessageSchema } from '../models/groupModels.js';
 import { getUserIdFromToken, isGroupExcist, isUserAdmin } from '../Helper/helper.js';
 import { authendicate } from '../middleware/middleware.js';
+import { UserLoginCredentials } from '../models/loginModels.js';
 
 export const router = express.Router();
 
@@ -143,7 +144,24 @@ router.post('/api/updateGroupMessage', async (req, res) => {
 
 router.post('/api/addMember', authendicate, async (req, res) => {
     try {
+        const { groupId, members } = req.body;
+        const token = req.header('Authorization');
+        const userId = await getUserIdFromToken(token);
 
+        const isUserExcist = await UserLoginCredentials.findOne({ userId: userId });
+        if (!isUserExcist) {
+            return res.status(404).json({ success: false, error: "User not found." });
+        }
+
+        const isGroupExcist = await groupSchema.findOne({ groupId: groupId });
+        if (!isGroupExcist) {
+            return res.status(404).json({ success: false, error: "Group not found." });
+        }
+
+        isGroupExcist.members = isGroupExcist.members.concat(members);
+        isGroupExcist.save()
+        .then(() => { return res.status(200).json({ success: true, message: "Members added successfully..!!" })})
+        .catch((error) => { return res.status(400).json({ success: false, error: error.message })})
     } catch (error) {
         return res.status(500).json({ success: false, error: error.message });
     }
@@ -151,7 +169,25 @@ router.post('/api/addMember', authendicate, async (req, res) => {
 
 router.post('/api/removeMember', authendicate, async (req, res) => {
     try {
+        const { removeMemberIds, groupId } = req.body;
+        const token = req.header('Authorization');
+        const userId = await getUserIdFromToken(token);
 
+        const isUserExcist = await UserLoginCredentials.findOne({ userId: userId });
+        if (!isUserExcist) {
+            return res.status(404).json({ success: false, error: "User not found." });
+        }
+
+        const isGroupExcist = await groupSchema.findOne({ groupId: groupId });
+        if (!isGroupExcist) {
+            return res.status(404).json({ success: false, error: "Group not found." });
+        }
+
+        const filteredMembers = isGroupExcist.members.filter((data) => !removeMemberIds.includes(data));
+        isGroupExcist.members = filteredMembers;
+        isGroupExcist.save()
+        .then(() => { return res.status(200).json({ success: true, message: "Members removed successfully..!!" })})
+        .catch((error) => { return res.status(400).json({ success: false, error: error.message })})
     } catch (error) {
         return res.status(500).json({ success: false, error: error.message });
     }

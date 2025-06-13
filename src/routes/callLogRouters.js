@@ -105,7 +105,7 @@ router.post('/api/createGroupCallLogs', authendicate, async (req, res) => {
             isCalling: true
         })
         await callLogStructure.save()
-        .then(() => { return res.status(200).json({ success: true, message: "Group call logs created..!!" })})
+        .then(() => { return res.status(200).json({ success: true, message: "Group call logs created..!!", data: callLogStructure })})
         .catch((error) => { return res.status(400).json({ success: false, error: error.message })})
     } catch (error) {
         return res.status(500).json({ success: false, error: error.message });

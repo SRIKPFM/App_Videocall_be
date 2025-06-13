@@ -141,6 +141,22 @@ router.post('/api/updateGroupMessage', async (req, res) => {
     }
 });
 
+router.post('/api/addMember', authendicate, async (req, res) => {
+    try {
+
+    } catch (error) {
+        return res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+router.post('/api/removeMember', authendicate, async (req, res) => {
+    try {
+
+    } catch (error) {
+        return res.status(500).json({ success: false, error: error.message });
+    }
+});
+
 router.post('/api/addAdmin', async (req, res) => {
     try {
         const { groupId, userId, selectedMembers } = req.body;

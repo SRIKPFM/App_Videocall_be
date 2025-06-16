@@ -83,6 +83,25 @@ router.post('/api/createGroup', async (req, res) => {
     }
 });
 
+router.post('/api/getGroupDetails', authendicate, async (req, res) => {
+    try {
+        const { groupId } = req.body;
+        const token = req.header('Authorization');
+        const userId = await getUserIdFromToken(token);
+        const getGroupDetails = await groupSchema.findOne({ groupId: groupId }, { _id:0, __v:0 });
+        if(!getGroupDetails) {
+            return res.status(404).json({ success: false, error: "Group not found." });
+        }
+        const isUserMember = getGroupDetails.members.find(id => id === userId);
+        if (!isUserMember) {
+            return res.status(400).json({ success: false, error: "You're not a group member." });
+        }
+        return res.status(200).json({ success: true, data: getGroupDetails });
+    } catch (error) {
+        return res.status(500).json({ success:false, error: error.message });
+    }
+});
+
 router.post('/api/storeGroupMessages', async (req, res) => {
     try {
         const { senderId, groupId, text, imageUrl, videoUrl, audioUrl, documentUrl } = req.body;

@@ -84,6 +84,10 @@ router.post('/api/getUserUniqueContact', authendicate, async (req, res) => {
     }
 });
 
+router.post('/api/updateUserContact', authendicate, async (req, res) => {
+    
+})
+
 router.post('/api/removeContact', authendicate, async (req, res) => {
     try {
         const { idNum, userName } =  req.body;

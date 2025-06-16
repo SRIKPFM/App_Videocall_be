@@ -118,11 +118,21 @@ router.post('/api/sentCallNotificationForGroup', authendicate, async (req, res) 
             }
         }));
 
-        const response = await admin.messaging().send(sendMessage);
-        if (!response) {
-            return res.status(400).json({ success: false, error: "Error occurred while sending call notification." });
-        }
-        return res.status(200).json({ success: true, message: `Notification sent to ${onlineMembers.length} online group members.`, data: response });
+        const sendPromises = sendMessage.map(message => admin.messaging().send(sendMessage));
+
+        const response = await Promise.allSettled(sendPromises);
+        // if (!response) {
+        //     return res.status(400).json({ success: false, error: "Error occurred while sending call notification." });
+        // }
+        // return res.status(200).json({ success: true, message: `Notification sent to ${onlineMembers.length} online group members.`, data: response });
+        const successes = results.filter(r => r.status === "fulfilled");
+        const failures = results.filter(r => r.status === "rejected");
+
+        return res.status(200).json({
+            success: true,
+            message: `Sent ${successes.length} notifications, ${failures.length} failed.`,
+            failures: failures.map(f => f.reason.message)
+        });
     } catch (error) {
         return res.status(500).json({ success: false, error: error.message });
     }

@@ -48,7 +48,7 @@ export function setupSocketEvents(io, onlineUsers) {
                     location: location ? location : null,
                     contact: contact ? contact : null
                 },
-                status: onlineUsers.has(receiverId) ? 'delivered' : 'sent'
+                isMessageDelivered: onlineUsers.has(receiverId) ? 'delivered' : 'sent'
             });
 
             await newMessage.save();
@@ -58,6 +58,68 @@ export function setupSocketEvents(io, onlineUsers) {
             }
 
             io.to(socket.id).emit('messageStatus', { messageId, status: newMessage.status });
+        });
+
+        socket.on("forward_message_individual", async (data) => {
+            const { senderId, receiverId, isForwared, messages } = data;
+            const forwaredMessages = [];
+            try {
+                for (const msg of messages) {
+                    const original = await MessageSchema.findOne({ messageId: msg.originalMessageId });
+                    if (!original) continue;
+
+                    const newMessage = new MessageSchema({
+                        messageId: uuidv4(),
+                        senderId,
+                        receiverId,
+                        content: original.content,
+                        isForwarded: isForwared,
+                        forwaredFrom: msg.forwaredFrom || original.senderId,
+                        forwaredFromMessageId: msg.originalMessageId
+                    });
+
+                    await newMessage.save();
+                    io.to(receiverId).emit("newMessage", newMessage);
+                    forwaredMessages.push(newMessage);
+                }
+                socket.emit("forwaredCompleted", { success: true, messages: forwaredMessages })
+            } catch (error) {
+                return socket.emit("errorMessage", { error: "Failed to forward message" });
+            }
+        });
+
+        socket.on('replay_message_individual', async (data) => {
+            const { senderId, receiverId, replayFor } = data;
+            try {
+                const getForwaredMessageDetails = await MessageSchema.findOne({ messageId: replayFor });
+                if (!getForwaredMessageDetails) {
+                    return socket.emit("errorMessae", { error: "Message not found." });
+                }
+
+                const newMessage = new MessageSchema({
+                    messageId: uuidv4(),
+                    senderId,
+                    receiverId,
+                    content: {
+                        text: getForwaredMessageDetails.content.text ? getForwaredMessageDetails.content.text : null,
+                        imageUrl: getForwaredMessageDetails.content.imageUrl ? getForwaredMessageDetails.content.imageUrl : null,
+                        videoUrl: getForwaredMessageDetails.content.videoUrl ? getForwaredMessageDetails.content.videoUrl : null,
+                        audioUrl: getForwaredMessageDetails.content.audioUrl ? getForwaredMessageDetails.content.audioUrl : null,
+                        documentUrl: getForwaredMessageDetails.content.documentUrl ? getForwaredMessageDetails.content.documentUrl : null,
+                        location: getForwaredMessageDetails.content.location ? getForwaredMessageDetails.content.location : null,
+                        contact: getForwaredMessageDetails.content.contact ? getForwaredMessageDetails.content.contact : null,
+                        timeStamp: Date.now()
+                    },
+                    replayFor: replayFor
+                });
+
+                await newMessage.save();
+                io.to(receiverId).emit("newMessage", newMessage);
+
+                socket.emit("replayCompleted", { success: true, messages: forwaredMessages });
+            } catch (error) {
+                return socket.emit("errorMessage", { error: "Failed to forward message" });
+            }
         });
 
         socket.on('messagesRead', async ({ userId, chatWithUserId }) => {
@@ -85,6 +147,66 @@ export function setupSocketEvents(io, onlineUsers) {
     });
 
 };
+
+// router.post('/api/test/reply', async (req, res) => {
+//     const { senderId, receiverId, replayFor } = req.body;
+//     try {
+//         const getForwaredMessageDetails = await MessageSchema.findOne({ messageId: replayFor });
+//         if (!getForwaredMessageDetails) {
+//             return socket.emit("errorMessae", { error: "Message not found." });
+//         }
+
+//         const newMessage = new MessageSchema({
+//             messageId: uuidv4(),
+//             senderId,
+//             receiverId,
+//             content: {
+//                 text: getForwaredMessageDetails.content.text ? getForwaredMessageDetails.content.text : null,
+//                 imageUrl: getForwaredMessageDetails.content.imageUrl ? getForwaredMessageDetails.content.imageUrl : null,
+//                 videoUrl: getForwaredMessageDetails.content.videoUrl ? getForwaredMessageDetails.content.videoUrl : null,
+//                 audioUrl: getForwaredMessageDetails.content.audioUrl ? getForwaredMessageDetails.content.audioUrl : null,
+//                 documentUrl: getForwaredMessageDetails.content.documentUrl ? getForwaredMessageDetails.content.documentUrl : null,
+//                 location: getForwaredMessageDetails.content.location ? getForwaredMessageDetails.content.location : null,
+//                 contact: getForwaredMessageDetails.content.contact ? getForwaredMessageDetails.content.contact : null,
+//                 timeStamp: Date.now()
+//             },
+//             replayFor: replayFor
+//         });
+
+//         await newMessage.save();
+//         res.status(200).json({ success: true, message: newMessage });
+//     } catch (err) {
+//         res.status(500).json({ success: false, error: err.message });
+//     }
+// });
+
+// router.post('/api/test/forward', async (req, res) => {
+//     const { senderId, receiverId, messages } = req.body;
+//     try {
+//         const forwardedMessages = [];
+
+//         for (const msg of messages) {
+//             const original = await MessageSchema.findOne({ messageId: msg.originalMessageId });
+//             if (!original) continue;
+
+//             const newMessage = new MessageSchema({
+//                 messageId: uuidv4(),
+//                 senderId,
+//                 receiverId,
+//                 content: original.content,
+//                 isForwarded: true,
+//                 forwaredFrom: msg.forwardedFrom || original.senderId,
+//                 forwaredFromMessageId: msg.originalMessageId
+//             });
+//             await newMessage.save();
+//             forwardedMessages.push(newMessage);
+//         }
+
+//         res.status(200).json({ success: true, messages: forwardedMessages });
+//     } catch (err) {
+//         res.status(500).json({ success: false, error: err.message });
+//     }
+// });
 
 router.post('/api/storeMessages', authendicate, async (req, res) => {
     try {
@@ -312,7 +434,7 @@ router.post('/api/chat/delete-for-me', authendicate, async (req, res) => {
 
         const deleteMessage = await MessageSchema.updateOne({
             $or: [
-                { senderId : userId },
+                { senderId: userId },
                 { receiverId: userId }
             ], messageId: messageId
         }, { $addToSet: { deleteFor: userId } });
@@ -363,5 +485,17 @@ router.post('/api/chat/deleteForEveryone', authendicate, async (req, res) => {
 //         return res.status(500).json({ success: fasle, error: error.message });
 //     }
 // });
+
+router.post('/api/forwardMessages', authendicate, async (req, res) => {
+    try {
+        const { receiverId, isForwared, forwaredFromMessagId } = req.body;
+        const token = req.header('Authorization');
+        const senderId = await getUserIdFromToken(token);
+
+
+    } catch (error) {
+        return res.status(500).json({ success: false, error: error.message });
+    }
+});
 
 export default router;

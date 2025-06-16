@@ -19,7 +19,11 @@ export const MessageSchema = mongoose.model(
                 contact: { name: String, num: String },
                 timeStamp: { type: Date, default: Date.now }
             },
-            isPined: Boolean,
+            isPined: { type: Boolean, default: false },
+            isForwarded: { type: Boolean, default: false },
+            forwaredFrom: { type: String, default: null },
+            forwaredFromMessageId: { type: String, default: null },
+            replayFor: { type: String, default: null },
             deleteFor: [{ type: String }],
             isDeleteForEveryone: { type: Boolean, default: false },
             isMessageDelivered: { type: String, enum: [ 'sent', 'delivered', 'read' ], default: 'sent'},

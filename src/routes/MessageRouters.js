@@ -89,7 +89,7 @@ export function setupSocketEvents(io, onlineUsers) {
         });
 
         socket.on('replay_message_individual', async (data) => {
-            const { senderId, receiverId, replayFor } = data;
+            const { senderId, receiverId, replayFor, text, imageUrl, videoUrl, audioUrl, documentUrl, location, contact } = data;
             try {
                 const getForwaredMessageDetails = await MessageSchema.findOne({ messageId: replayFor });
                 if (!getForwaredMessageDetails) {
@@ -101,13 +101,13 @@ export function setupSocketEvents(io, onlineUsers) {
                     senderId,
                     receiverId,
                     content: {
-                        text: getForwaredMessageDetails.content.text ? getForwaredMessageDetails.content.text : null,
-                        imageUrl: getForwaredMessageDetails.content.imageUrl ? getForwaredMessageDetails.content.imageUrl : null,
-                        videoUrl: getForwaredMessageDetails.content.videoUrl ? getForwaredMessageDetails.content.videoUrl : null,
-                        audioUrl: getForwaredMessageDetails.content.audioUrl ? getForwaredMessageDetails.content.audioUrl : null,
-                        documentUrl: getForwaredMessageDetails.content.documentUrl ? getForwaredMessageDetails.content.documentUrl : null,
-                        location: getForwaredMessageDetails.content.location ? getForwaredMessageDetails.content.location : null,
-                        contact: getForwaredMessageDetails.content.contact ? getForwaredMessageDetails.content.contact : null,
+                        text: text ? text : null,
+                        imageUrl: imageUrl ? imageUrl : null,
+                        videoUrl: videoUrl ? videoUrl : null,
+                        audioUrl: audioUrl ? audioUrl : null,
+                        documentUrl: documentUrl ? documentUrl : null,
+                        location: location ? location : null,
+                        contact: contact ? contact : null,
                         timeStamp: Date.now()
                     },
                     replayFor: replayFor
@@ -116,7 +116,7 @@ export function setupSocketEvents(io, onlineUsers) {
                 await newMessage.save();
                 io.to(receiverId).emit("newMessage", newMessage);
 
-                socket.emit("replayCompleted", { success: true, messages: forwaredMessages });
+                socket.emit("replayCompleted", { success: true, messages: newMessage });
             } catch (error) {
                 return socket.emit("errorMessage", { error: "Failed to forward message" });
             }
@@ -148,37 +148,37 @@ export function setupSocketEvents(io, onlineUsers) {
 
 };
 
-// router.post('/api/test/reply', async (req, res) => {
-//     const { senderId, receiverId, replayFor } = req.body;
-//     try {
-//         const getForwaredMessageDetails = await MessageSchema.findOne({ messageId: replayFor });
-//         if (!getForwaredMessageDetails) {
-//             return socket.emit("errorMessae", { error: "Message not found." });
-//         }
+router.post('/api/test/reply', async (req, res) => {
+    const { senderId, receiverId, replayFor, text, imageUrl, videoUrl, audioUrl, documentUrl, location, contact } = req.body;
+    try {
+        const getForwaredMessageDetails = await MessageSchema.findOne({ messageId: replayFor });
+        if (!getForwaredMessageDetails) {
+            return socket.emit("errorMessae", { error: "Message not found." });
+        }
 
-//         const newMessage = new MessageSchema({
-//             messageId: uuidv4(),
-//             senderId,
-//             receiverId,
-//             content: {
-//                 text: getForwaredMessageDetails.content.text ? getForwaredMessageDetails.content.text : null,
-//                 imageUrl: getForwaredMessageDetails.content.imageUrl ? getForwaredMessageDetails.content.imageUrl : null,
-//                 videoUrl: getForwaredMessageDetails.content.videoUrl ? getForwaredMessageDetails.content.videoUrl : null,
-//                 audioUrl: getForwaredMessageDetails.content.audioUrl ? getForwaredMessageDetails.content.audioUrl : null,
-//                 documentUrl: getForwaredMessageDetails.content.documentUrl ? getForwaredMessageDetails.content.documentUrl : null,
-//                 location: getForwaredMessageDetails.content.location ? getForwaredMessageDetails.content.location : null,
-//                 contact: getForwaredMessageDetails.content.contact ? getForwaredMessageDetails.content.contact : null,
-//                 timeStamp: Date.now()
-//             },
-//             replayFor: replayFor
-//         });
+        const newMessage = new MessageSchema({
+            messageId: uuidv4(),
+            senderId,
+            receiverId,
+            content: {
+                text: text ? text : null,
+                imageUrl: imageUrl ? imageUrl : null,
+                videoUrl: videoUrl ? videoUrl : null,
+                audioUrl: audioUrl ? audioUrl : null,
+                documentUrl: documentUrl ? documentUrl : null,
+                location: location ? location : null,
+                contact: contact ? contact : null,
+                timeStamp: Date.now()
+            },
+            replayFor: replayFor
+        });
 
-//         await newMessage.save();
-//         res.status(200).json({ success: true, message: newMessage });
-//     } catch (err) {
-//         res.status(500).json({ success: false, error: err.message });
-//     }
-// });
+        await newMessage.save();
+        res.status(200).json({ success: true, message: newMessage });
+    } catch (err) {
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
 
 // router.post('/api/test/forward', async (req, res) => {
 //     const { senderId, receiverId, messages } = req.body;

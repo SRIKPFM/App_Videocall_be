@@ -112,7 +112,7 @@ router.post('/api/createGroupCallLogs', authendicate, async (req, res) => {
     }
 });
 
-router.post('/api/groupCallLogs/updateStatus', authendicate, async (req, res) => {
+router.post('/api/groupCallLogs/updateRecordedUrl', authendicate, async (req, res) => {
     try {
         const { callId, recordedUrl } = req.body;
         const token = req.header('Authorization');

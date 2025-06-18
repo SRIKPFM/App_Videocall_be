@@ -54,6 +54,46 @@ export function setupGroupChat(io, onlineUsers) {
                 }
             )
         });
+
+        socket.on('forward_message_group', async (data) => {
+            const { senderId, groupId, isForwarded, forwardedFrom, forwardedFromMessageId, messages } = data;
+            const forwardedMessages = [];
+            try {
+                const isGroupExcist = await groupSchema.findOne({ groupId: groupId });
+                if (!isGroupExcist) {
+                    return socket.emit("errorMessage", { error: "Group not found." });
+                }
+                for (const msg of messages) {
+                    const original = await groupMessageSchema.findOne({ messageId: forwardedFromMessageId });
+                    if (!original) continue;
+
+                    const newMessage = new groupMessageSchema({
+                        messageId: uuidv4(),
+                        groupId: groupId,
+                        senderId: senderId,
+                        content: {
+                            text: original.content.text ? original.content.text : null,
+                            imageUrl: original.content.imageUrl ? original.content.imageUrl : null,
+                            videoUrl: original.content.videoUrl ? original.content.videoUrl : null,
+                            audioUrl: original.content.audioUrl ? original.content.audioUrl : null,
+                            documentUrl: original.content.documentUrl ? original.content.documentUrl : null,
+                            location: original.content.location ? original.content.location : null,
+                            contact: original.content.contact ? original.content.contact : null,
+                            timeStamp: original.content.timeStamp ? original.content.timeStamp : null
+                        },
+                        isForwarded: true,
+                        forwardedFrom: msg.forwardedFrom || original.senderId,
+                        forwardedFromMessageId: msg.originalMessageId
+                    });
+
+                    await newMessage.save();
+                    io.to(groupId).emit("newMessage", newMessage);
+                    forwardedMessages.push(newMessage);
+                }                
+            } catch (error) {
+                return socket.emit("errorMessage", { error: "Failed to forward message" });
+            }
+        });
     })
 };
 
@@ -258,6 +298,29 @@ router.post('/api/updateAdminOnly', async (req, res) => {
                 .then(() => { return res.status(200).json({ success: true, message: "Features updated successfully..!!" }) })
                 .catch((error) => { return res.status(400).json({ success: false, error: error.message }) });
         }
+    } catch (error) {
+        return res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+router.post('/api/updateGroupDetails', authendicate, async (req, res) => {
+    try {
+        const updates = req.body;
+        const token = req.header('Authorization');
+        const userId = await getUserIdFromToken(token);
+        const isGroupExcist = await groupSchema.findOne({ groupId: updates.groupId });
+        if (!isGroupExcist) {
+            return res.status(404).json({ success: false, error: "Group not fount." });
+        }
+        const isUserInGroup = isGroupExcist.members.find(id => id === userId);
+        if (!isUserInGroup) {
+            return res.status(400).json({ success: fasle, error: "You're not a member of this group." });
+        }
+        const updateGroupDetails = await groupSchema.findOneAndUpdate({ groupId: updates.groupId }, { $set: updates });
+        if (!updateGroupDetails) {
+            return res.status(400).json({ success: false, error: "Can't update group details." });
+        }
+        return res.status(200).json({ success: true, message: "Group details updated successfully." });
     } catch (error) {
         return res.status(500).json({ success: false, error: error.message });
     }

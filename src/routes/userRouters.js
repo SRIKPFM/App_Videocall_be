@@ -84,9 +84,7 @@ router.post('/api/userLoginOrLogout', async (req, res) => {
         if (!isUser) {
             return res.status(404).json({ success: false, error: "Couldn't find any user using this email. Enter a valid mail." });
         } else if (type === 'login') {
-            console.log(isUser.password)
             const unHashPassword = await bcrypt.compare(password, isUser.password);
-            console.log(unHashPassword)
             if (unHashPassword === true) {
                 isUser.isLoggedin = true;
                 await isUser.save();

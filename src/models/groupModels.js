@@ -35,8 +35,13 @@ export const groupMessageSchema = mongoose.model(
                 audioUrl: { type: String, default: null },
                 documentUrl: { type: String, default: null },
                 location: { type: String, default: null },
-                contact: { name: String, num: String }
+                contact: { name: String, num: String },
+                timeStamp: { type: Date, default: Date.now() }
             },
+            isForwarded: { type: Boolean, default: false },
+            forwardedFrom: { type: String, default: null },
+            forwardedFromMessageId: { type: String, default: null },
+            replayFor: { type: String, default: null },
             deleteFor: [{ type: String }],
             isDeleteForEveryone: { type: Boolean, default: false },
             readBy: [String],

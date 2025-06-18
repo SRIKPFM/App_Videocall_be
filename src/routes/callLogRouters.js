@@ -114,7 +114,7 @@ router.post('/api/createGroupCallLogs', authendicate, async (req, res) => {
 
 router.post('/api/groupCallLogs/updateStatus', authendicate, async (req, res) => {
     try {
-        const { isCalling, callId } = req.body;
+        const { callId, recordedUrl } = req.body;
         const token = req.header('Authorization');
         const userId = await getUserIdFromToken(token);
 
@@ -122,15 +122,10 @@ router.post('/api/groupCallLogs/updateStatus', authendicate, async (req, res) =>
         if (!ifCallExcist) {
             return res.status(404).json({ success: false, error: "Can't find call logs." });
         }
-        if (isCalling === false) {
-            ifCallExcist.isCalling = isCalling;
-            ifCallExcist.endTime = Date.now();
-            if (ifCallExcist.startTime) {
-                ifCallExcist.duration = Math.floor((ifCallExcist.endTime - ifCallExcist.startTime) / 1000);
-            }
-        }
+        ifCallExcist.recordedUrl = recordedUrl;
         ifCallExcist.save()
         .then(() => { return res.status(200).json({ success: true, message: "Group call status updated..!!" }) })
+        .catch((error) => { return res.status(400).json({ success: false, error: error.message })});
     } catch (error) {
         return res.status(500).json({ success: false, error: error.message });
     }

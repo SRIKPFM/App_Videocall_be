@@ -61,7 +61,7 @@ export function setupSocketEvents(io, onlineUsers) {
         });
 
         socket.on("forward_message_individual", async (data) => {
-            const { senderId, receiverId, isForwared, messages } = data;
+            const { senderId, receiverId, isForwarded, messages } = data;
             const forwaredMessages = [];
             try {
                 for (const msg of messages) {
@@ -73,9 +73,9 @@ export function setupSocketEvents(io, onlineUsers) {
                         senderId,
                         receiverId,
                         content: original.content,
-                        isForwarded: isForwared,
-                        forwaredFrom: msg.forwaredFrom || original.senderId,
-                        forwaredFromMessageId: msg.originalMessageId
+                        isForwarded: isForwarded,
+                        forwardedFrom: msg.forwaredFrom || original.senderId,
+                        forwardedFromMessageId: msg.originalMessageId
                     });
 
                     await newMessage.save();

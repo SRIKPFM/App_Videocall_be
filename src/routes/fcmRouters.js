@@ -1,5 +1,6 @@
 import express from 'express';
 import admin from '../Helper/fcm.js';
+import { Messaging } from 'firebase-admin/messaging';
 import { UserLoginCredentials } from '../models/loginModels.js';
 import { CallLogDetails } from '../models/callLogModels.js';
 import { authendicate } from '../middleware/middleware.js';
@@ -72,62 +73,68 @@ router.post('/api/sentCallNotification', authendicate, async (req, res) => {
 });
 
 router.post('/api/sentCallNotificationForGroup', authendicate, async (req, res) => {
-    try {
-        const { callType, callId, type, channelName, groupId } = req.body;
-        const token = req.header('Authorization');
-        const userId = await getUserIdFromToken(token);
+  try {
+    const { callType, callId, type, channelName, groupId } = req.body;
+    const token = req.header('Authorization');
+    const userId = await getUserIdFromToken(token);
 
-        const caller = await UserLoginCredentials.findOne({ userId: userId });
-        if (!caller || caller.isLoggedin === false) {
-            return res.status(404).json({ success: false, error: "Caller is not logged in or not found." });
-        }
-
-        const group = await groupSchema.findOne({ groupId: groupId });
-        if (!group) {
-            return res.status(404).json({ success: false, error: "Group not found." });
-        }
-
-        const groupMembersIds = group.members.filter(id => id !== userId);
-
-        const groupMembers = await UserLoginCredentials.find({ userId: { $in: groupMembersIds } });
-        console.log(groupMembers);
-
-        const onlineMembers = groupMembers.filter(member => member.isLoggedin && member.fcmToken);
-        if (onlineMembers.length === 0) {
-            return res.status(400).json({ success: false, error: "There is no one in the online." });
-        }
-
-        const sendMessage = onlineMembers.map(member => ({
-            token: member.fcmToken,
-            data: {
-                title: type,
-                body: type === "Incoming group call"
-                    ? `You have a group call from ${group.name}`
-                    : `You have a missed group call from ${group.name}`,
-                sound: "default",
-                type: String(type),
-                groupId: String(groupId),
-                callId: String(callId),
-                callerId: String(userId),
-                isCallee: 'true',
-                callType: String(callType),
-                channelName: String(channelName)
-            },
-            android: {
-                priority: 'high'
-            }
-        }));
-
-        const sendPromises = sendMessage.map(message => admin.messaging().sendEachForMulticast(sendMessage));
-
-        return res.status(200).json({
-            success: true,
-            message: `Sent ${successes.length} notifications, ${failures.length} failed.`,
-            failures: failures.map(f => f.reason.message)
-        });
-    } catch (error) {
-        return res.status(500).json({ success: false, error: error.message });
+    const caller = await UserLoginCredentials.findOne({ userId });
+    if (!caller || !caller.isLoggedin) {
+      return res.status(404).json({ success: false, error: "Caller is not logged in or not found." });
     }
+
+    const group = await groupSchema.findOne({ groupId });
+    if (!group) {
+      return res.status(404).json({ success: false, error: "Group not found." });
+    }
+
+    const groupMembersIds = group.members.filter(id => id !== userId);
+    const groupMembers = await UserLoginCredentials.find({ userId: { $in: groupMembersIds } });
+
+    const onlineMembers = groupMembers.filter(member => member.isLoggedin && member.fcmToken);
+    if (onlineMembers.length === 0) {
+      return res.status(400).json({ success: false, error: "No online members with FCM tokens." });
+    }
+
+    const fcmTokens = onlineMembers.map(member => member.fcmToken);
+
+    const message = {
+      tokens: fcmTokens,
+      notification: {
+        title: type,
+        body: type === "Incoming group call"
+          ? `You have a group call from ${group.name}`
+          : `You have a missed group call from ${group.name}`,
+      },
+      data: {
+        type: String(type),
+        groupId: String(groupId),
+        callId: String(callId),
+        callerId: String(userId),
+        isCallee: 'true',
+        callType: String(callType),
+        channelName: String(channelName)
+      },
+      android: {
+        priority: 'high',
+        notification: {
+          sound: "default"
+        }
+      }
+    };
+
+    const response = await admin.messaging().sendMulticast(message);
+
+    return res.status(200).json({
+      success: true,
+      message: `Sent ${response.successCount} notifications, ${response.failureCount} failed.`,
+      failures: response.responses
+        .filter(r => !r.success)
+        .map(f => f.error?.message || 'Unknown error')
+    });
+  } catch (error) {
+    return res.status(500).json({ success: false, error: error.message });
+  }
 });
 
 // router.post('/api/sentCallNotificationForGroup', authendicate, async (req, res) => {

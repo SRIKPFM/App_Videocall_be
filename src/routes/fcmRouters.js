@@ -1,5 +1,6 @@
 import express from 'express';
 import admin from '../Helper/fcm.js';
+import { onlineUsers } from '../Helper/socketManger.js';
 import { UserLoginCredentials } from '../models/loginModels.js';
 import { CallLogDetails } from '../models/callLogModels.js';
 import { authendicate } from '../middleware/middleware.js';
@@ -153,6 +154,7 @@ router.post('/api/group/sentCallNotificationForGroup', authendicate, async (req,
     }
 
     const groupMembersIds = group.members.filter(id => id !== userId);
+    console.log(groupMembersIds)
     const groupMembers = await UserLoginCredentials.find({ userId: { $in: groupMembersIds } });
 
     const online = [];
@@ -172,6 +174,8 @@ router.post('/api/group/sentCallNotificationForGroup', authendicate, async (req,
           name: caller.name
         }
       };
+      console.log(member.isLoggedin);
+      console.log(socketId)
 
       if (member.isLoggedin && socketId) {
         io.to(socketId).emit("incoming-group-call", callPayload);

@@ -174,8 +174,6 @@ router.post('/api/group/sentCallNotificationForGroup', authendicate, async (req,
           name: caller.name
         }
       };
-      console.log(member.isLoggedin);
-      console.log(socketId)
 
       if (member.isLoggedin && socketId) {
         io.to(socketId).emit("incoming-group-call", callPayload);

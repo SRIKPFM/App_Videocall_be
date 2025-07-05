@@ -89,11 +89,71 @@ export function setupGroupChat(io, onlineUsers) {
                     await newMessage.save();
                     io.to(groupId).emit("newMessage", newMessage);
                     forwardedMessages.push(newMessage);
-                }                
+                }
             } catch (error) {
                 return socket.emit("errorMessage", { error: "Failed to forward message" });
             }
         });
+
+        socket.on('reply_message_group', async (data) => {
+            const {
+                senderId,
+                groupId,
+                replayFor,
+                text,
+                imageUrl,
+                videoUrl,
+                audioUrl,
+                documentUrl,
+                location,
+                contact
+            } = data;
+
+            try {
+                const originalMessage = await groupMessageSchema.findOne({ messageId: replayFor });
+                if (!originalMessage) {
+                    return socket.emit("errorMessage", { error: "Message to reply not found." });
+                }
+
+                const newMessage = new groupMessageSchema({
+                    messageId: uuidv4(),
+                    senderId,
+                    groupId,
+                    content: {
+                        text: text || null,
+                        imageUrl: imageUrl || null,
+                        videoUrl: videoUrl || null,
+                        audioUrl: audioUrl || null,
+                        documentUrl: documentUrl || null,
+                        location: location || null,
+                        contact: contact || null,
+                        timeStamp: Date.now()
+                    },
+                    replayFor
+                });
+
+                await newMessage.save();
+
+                const group = await groupSchema.findOne({ groupId });
+                if (!group) {
+                    return socket.emit("errorMessage", { error: "Group not found." });
+                }
+
+                for (const memberId of group.members) {
+                    if (memberId !== senderId && onlineUsers.has(memberId)) {
+                        const socketId = onlineUsers.get(memberId);
+                        io.to(socketId).emit("newGroupMessage", newMessage);
+                    }
+                }
+
+                socket.emit("replyGroupCompleted", { success: true, message: newMessage });
+
+            } catch (error) {
+                console.error("Group reply error:", error);
+                socket.emit("errorMessage", { error: "Failed to reply in group." });
+            }
+        });
+
     })
 };
 
@@ -128,8 +188,8 @@ router.post('/api/getGroupDetails', authendicate, async (req, res) => {
         const { groupId } = req.body;
         const token = req.header('Authorization');
         const userId = await getUserIdFromToken(token);
-        const getGroupDetails = await groupSchema.findOne({ groupId: groupId }, { _id:0, __v:0 });
-        if(!getGroupDetails) {
+        const getGroupDetails = await groupSchema.findOne({ groupId: groupId }, { _id: 0, __v: 0 });
+        if (!getGroupDetails) {
             return res.status(404).json({ success: false, error: "Group not found." });
         }
         const isUserMember = getGroupDetails.members.find(id => id === userId);
@@ -138,7 +198,7 @@ router.post('/api/getGroupDetails', authendicate, async (req, res) => {
         }
         return res.status(200).json({ success: true, data: getGroupDetails });
     } catch (error) {
-        return res.status(500).json({ success:false, error: error.message });
+        return res.status(500).json({ success: false, error: error.message });
     }
 });
 
@@ -219,8 +279,8 @@ router.post('/api/addMember', authendicate, async (req, res) => {
 
         isGroupExcist.members = isGroupExcist.members.concat(members);
         isGroupExcist.save()
-        .then(() => { return res.status(200).json({ success: true, message: "Members added successfully..!!" })})
-        .catch((error) => { return res.status(400).json({ success: false, error: error.message })})
+            .then(() => { return res.status(200).json({ success: true, message: "Members added successfully..!!" }) })
+            .catch((error) => { return res.status(400).json({ success: false, error: error.message }) })
     } catch (error) {
         return res.status(500).json({ success: false, error: error.message });
     }
@@ -245,8 +305,8 @@ router.post('/api/removeMember', authendicate, async (req, res) => {
         const filteredMembers = isGroupExcist.members.filter((data) => !removeMemberIds.includes(data));
         isGroupExcist.members = filteredMembers;
         isGroupExcist.save()
-        .then(() => { return res.status(200).json({ success: true, message: "Members removed successfully..!!" })})
-        .catch((error) => { return res.status(400).json({ success: false, error: error.message })})
+            .then(() => { return res.status(200).json({ success: true, message: "Members removed successfully..!!" }) })
+            .catch((error) => { return res.status(400).json({ success: false, error: error.message }) })
     } catch (error) {
         return res.status(500).json({ success: false, error: error.message });
     }
